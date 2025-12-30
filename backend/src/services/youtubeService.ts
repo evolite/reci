@@ -33,14 +33,14 @@ function extractMetadataFromHtml(html: string, $: cheerio.CheerioAPI, videoId: s
   let title = ogTitle || metaTitle || pageTitle || 'Untitled';
 
   // Extract description - try multiple sources
-  let description = $('meta[property="og:description"]').attr('content')?.trim() || 
-                   $('meta[name="description"]').attr('content')?.trim() || 
-                   '';
+  const ogDescription = $('meta[property="og:description"]').attr('content')?.trim();
+  const metaDescription = $('meta[name="description"]').attr('content')?.trim();
+  let description = ogDescription || metaDescription || '';
 
   // Extract thumbnail - try multiple sources
-  let thumbnailUrl = $('meta[property="og:image"]').attr('content')?.trim() || 
-                    $('meta[property="og:image:secure_url"]').attr('content')?.trim() ||
-                    '';
+  const ogImage = $('meta[property="og:image"]').attr('content')?.trim();
+  const ogImageSecure = $('meta[property="og:image:secure_url"]').attr('content')?.trim();
+  let thumbnailUrl = ogImage || ogImageSecure || '';
 
   // Fallback: try to extract from JSON-LD or embedded data
   if (!title || title === 'Untitled') {

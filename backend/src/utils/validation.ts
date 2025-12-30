@@ -67,7 +67,9 @@ export function sanitizeInput(input: string, maxLength: number = 10000): string 
 
   // Remove null bytes and control characters (except newlines and tabs for recipe text)
   // Using Unicode escape sequences instead of hex to avoid control character issues
-  let sanitized = input.replace(/[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F]/g, '');
+  // Exclude \u0009 (tab) and \u000A (newline) from removal
+  const controlCharPattern = /[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F]/g;
+  let sanitized = input.replace(controlCharPattern, '');
   
   // Limit length
   if (sanitized.length > maxLength) {
