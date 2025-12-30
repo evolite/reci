@@ -42,7 +42,7 @@ router.post('/register', async (req: Request, res: Response) => {
     }
 
     // First user becomes admin
-    const isAdmin = isFirstUser;
+    const isAdmin = firstUser;
 
     // Hash password
     const passwordHash = await hashPassword(password);

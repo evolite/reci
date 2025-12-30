@@ -167,7 +167,7 @@ export async function getVideoMetadata(videoId: string): Promise<YouTubeVideoMet
     const $ = cheerio.load(html);
 
     // Extract metadata
-    const { title, description, thumbnailUrl } = extractMetadataFromHtml(html, $, videoId);
+    const { title, description, thumbnailUrl } = extractMetadataFromHtml(html, $ as any, videoId);
 
     // Extract comments
     const topComments = extractCommentsFromHtml(html);
