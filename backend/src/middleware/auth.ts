@@ -63,7 +63,7 @@ export async function requireAdmin(req: AuthRequest, res: Response, next: NextFu
 export async function optionalAuth(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
+    if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       const decoded = verifyToken(token);
       
