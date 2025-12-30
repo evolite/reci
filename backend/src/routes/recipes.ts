@@ -1,9 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { extractVideoId, getVideoMetadata } from '../services/youtubeService';
-import { analyzeRecipe, analyzeRecipeWithVision, analyzeRecipeFromText } from '../services/openaiService';
+import { analyzeRecipe, analyzeRecipeWithVision } from '../services/openaiService';
 import { CreateRecipeInput } from '../models/Recipe';
 import { prisma } from '../lib/prisma';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { analyzeAndUpdateRecipe, prepareUpdateData } from './recipeHelpers';
 
 const router = Router();
 

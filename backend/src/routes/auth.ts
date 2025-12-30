@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { hashPassword, verifyPassword, generateToken, generateVerificationToken, generateResetToken } from '../services/authService';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { validateInviteToken, isFirstUser } from './authHelpers';
 
 const router = Router();
 
@@ -15,39 +16,20 @@ router.post('/register', async (req: Request, res: Response) => {
     }
 
     // Check if this is the first user (no invite needed)
-    const userCount = await prisma.user.count();
-    const isFirstUser = userCount === 0;
-
+    const firstUser = await isFirstUser();
     let invite = null;
-    if (!isFirstUser) {
-      // Not first user - require invite token
-      if (!inviteToken) {
-        return res.status(400).json({ error: 'Invite token is required' });
+    
+    if (!firstUser) {
+      // Not first user - validate invite token
+      const validation = await validateInviteToken(inviteToken || '', email);
+      if (!validation.valid) {
+        return res.status(400).json({ error: validation.error });
       }
 
-      // Check if invite token is valid
+      // Get the invite for later use
       invite = await prisma.invite.findUnique({
         where: { token: inviteToken },
       });
-
-      if (!invite) {
-        return res.status(400).json({ error: 'Invalid invite token' });
-      }
-
-      // Check if invite is already used
-      if (invite.usedById) {
-        return res.status(400).json({ error: 'Invite token has already been used' });
-      }
-
-      // Check if invite is expired
-      if (invite.expiresAt && invite.expiresAt < new Date()) {
-        return res.status(400).json({ error: 'Invite token has expired' });
-      }
-
-      // Check if invite has email restriction
-      if (invite.email && invite.email !== email) {
-        return res.status(400).json({ error: 'This invite is restricted to a different email address' });
-      }
     }
 
     // Check if user already exists
