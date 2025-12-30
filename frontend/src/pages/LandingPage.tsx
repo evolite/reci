@@ -49,7 +49,7 @@ export function LandingPage() {
       });
   }, []);
 
-  // Auto-scroll recipe showcase horizontally
+  // Auto-scroll recipe mosaic vertically
   useEffect(() => {
     if (!scrollContainerRef.current || recipes.length === 0) return;
 
@@ -58,25 +58,36 @@ export function LandingPage() {
     const scrollSpeed = 0.5; // pixels per frame
     let animationId: number | null = null;
     let isPaused = false;
+    let lastTime = performance.now();
 
-    const scroll = () => {
+    const scroll = (currentTime: number) => {
       if (isPaused) {
+        lastTime = currentTime;
         animationId = requestAnimationFrame(scroll);
         return;
       }
       
-      scrollPosition += scrollSpeed;
-      const maxScroll = container.scrollWidth - container.clientWidth;
+      const deltaTime = currentTime - lastTime;
+      lastTime = currentTime;
+      
+      scrollPosition += scrollSpeed * (deltaTime / 16); // Normalize to 60fps
+      const maxScroll = container.scrollHeight - container.clientHeight;
       
       if (scrollPosition >= maxScroll) {
         scrollPosition = 0; // Reset to start for seamless loop
+        container.scrollTop = 0;
+      } else {
+        container.scrollTop = scrollPosition;
       }
       
-      container.scrollLeft = scrollPosition;
       animationId = requestAnimationFrame(scroll);
     };
 
-    animationId = requestAnimationFrame(scroll);
+    // Wait a bit before starting scroll
+    const startTimeout = setTimeout(() => {
+      lastTime = performance.now();
+      animationId = requestAnimationFrame(scroll);
+    }, 1000);
 
     // Pause on hover
     const handleMouseEnter = () => {
@@ -84,6 +95,7 @@ export function LandingPage() {
     };
     const handleMouseLeave = () => {
       isPaused = false;
+      lastTime = performance.now();
       if (animationId === null) {
         animationId = requestAnimationFrame(scroll);
       }
@@ -93,6 +105,7 @@ export function LandingPage() {
     container.addEventListener('mouseleave', handleMouseLeave);
 
     return () => {
+      clearTimeout(startTimeout);
       if (animationId !== null) {
         cancelAnimationFrame(animationId);
       }
@@ -151,144 +164,120 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      {/* Hero Section with Mosaic Layout */}
+      {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="container mx-auto px-4 py-8 sm:py-12">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
-            {/* Left side - Hero content */}
-            <div className="text-center lg:text-left">
-              <div className="flex justify-center lg:justify-start mb-6">
-                <div className="bg-gradient-to-br from-orange-500 to-amber-600 p-4 rounded-2xl shadow-2xl">
-                  <ChefHat className="w-16 h-16 text-white" />
-                </div>
-              </div>
-              <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-orange-600 via-amber-600 to-orange-600 bg-clip-text text-transparent">
-                Reci
-              </h1>
-              <p className="text-xl sm:text-2xl md:text-3xl font-semibold mb-4 text-gray-800 dark:text-gray-200">
-                Your Personal Recipe Video Library
-              </p>
-              <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto lg:mx-0">
-                Save, organize, and discover amazing recipes from YouTube. AI-powered tagging and smart search make finding your next meal effortless.
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-12">
-                <Link to="/login">
-                  <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                    Already have an account? Login
-                  </Button>
-                </Link>
-              </div>
-
-              {/* Features - Compact version */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Card className="text-center p-4 border-2 border-orange-200 dark:border-orange-800">
-                  <div className="bg-gradient-to-br from-orange-500 to-amber-600 w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3">
-                    <Plus className="w-5 h-5 text-white" />
-                  </div>
-                  <h3 className="text-sm font-semibold mb-1">Quick Add</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Paste YouTube URLs
-                  </p>
-                </Card>
-                <Card className="text-center p-4 border-2 border-orange-200 dark:border-orange-800">
-                  <div className="bg-gradient-to-br from-orange-500 to-amber-600 w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3">
-                    <Search className="w-5 h-5 text-white" />
-                  </div>
-                  <h3 className="text-sm font-semibold mb-1">Smart Search</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Find by ingredients
-                  </p>
-                </Card>
-                <Card className="text-center p-4 border-2 border-orange-200 dark:border-orange-800">
-                  <div className="bg-gradient-to-br from-orange-500 to-amber-600 w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3">
-                    <Sparkles className="w-5 h-5 text-white" />
-                  </div>
-                  <h3 className="text-sm font-semibold mb-1">AI-Powered</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Auto-tagging
-                  </p>
-                </Card>
+          <div className="text-center max-w-4xl mx-auto">
+            <div className="flex justify-center mb-6">
+              <div className="bg-gradient-to-br from-orange-500 to-amber-600 p-4 rounded-2xl shadow-2xl">
+                <ChefHat className="w-16 h-16 text-white" />
               </div>
             </div>
+            <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-orange-600 via-amber-600 to-orange-600 bg-clip-text text-transparent">
+              Reci
+            </h1>
+            <p className="text-xl sm:text-2xl md:text-3xl font-semibold mb-4 text-gray-800 dark:text-gray-200">
+              Your Personal Recipe Video Library
+            </p>
+            <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
+              Save, organize, and discover amazing recipes from YouTube. AI-powered tagging and smart search make finding your next meal effortless.
+            </p>
 
-            {/* Right side - Recipe Horizontal Feed */}
-            {!loading && recipes.length > 0 && (
-              <div className="lg:sticky lg:top-4">
-                <h2 className="text-xl sm:text-2xl font-bold text-center mb-4 lg:hidden">
-                  Discover Amazing Recipes
-                </h2>
-                <div
-                  ref={scrollContainerRef}
-                  className="flex gap-4 overflow-x-hidden"
-                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                >
-                  <style>{`
-                    div[ref="${scrollContainerRef}"]::-webkit-scrollbar {
-                      display: none;
-                    }
-                  `}</style>
-                  {recipes.map((recipe) => (
-                    <Card
-                      key={recipe.id}
-                      className="flex-shrink-0 w-64 sm:w-80 overflow-hidden group cursor-pointer hover:scale-105 transition-transform duration-300"
-                    >
-                      <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
-                        <img
-                          src={recipe.thumbnailUrl}
-                          alt={recipe.dishName}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                        />
-                      </div>
-                      <CardContent className="p-4">
-                        <h3 className="font-semibold text-sm sm:text-base line-clamp-2 mb-1">
-                          {recipe.dishName}
-                        </h3>
-                        <p className="text-xs text-muted-foreground line-clamp-2">
-                          {recipe.description}
-                        </p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="text-xs bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-2 py-1 rounded">
-                            {recipe.cuisineType}
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                  {/* Duplicate recipes for seamless loop */}
-                  {recipes.map((recipe) => (
-                    <Card
-                      key={`${recipe.id}-dup`}
-                      className="flex-shrink-0 w-64 sm:w-80 overflow-hidden group cursor-pointer hover:scale-105 transition-transform duration-300"
-                    >
-                      <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
-                        <img
-                          src={recipe.thumbnailUrl}
-                          alt={recipe.dishName}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                        />
-                      </div>
-                      <CardContent className="p-4">
-                        <h3 className="font-semibold text-sm sm:text-base line-clamp-2 mb-1">
-                          {recipe.dishName}
-                        </h3>
-                        <p className="text-xs text-muted-foreground line-clamp-2">
-                          {recipe.description}
-                        </p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="text-xs bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-2 py-1 rounded">
-                            {recipe.cuisineType}
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+              <Link to="/login">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                  Already have an account? Login
+                </Button>
+              </Link>
+            </div>
+
+            {/* Features */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto mb-12">
+              <Card className="text-center p-4 border-2 border-orange-200 dark:border-orange-800">
+                <div className="bg-gradient-to-br from-orange-500 to-amber-600 w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Plus className="w-5 h-5 text-white" />
                 </div>
-              </div>
-            )}
+                <h3 className="text-sm font-semibold mb-1">Quick Add</h3>
+                <p className="text-xs text-muted-foreground">
+                  Paste YouTube URLs
+                </p>
+              </Card>
+              <Card className="text-center p-4 border-2 border-orange-200 dark:border-orange-800">
+                <div className="bg-gradient-to-br from-orange-500 to-amber-600 w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Search className="w-5 h-5 text-white" />
+                </div>
+                <h3 className="text-sm font-semibold mb-1">Smart Search</h3>
+                <p className="text-xs text-muted-foreground">
+                  Find by ingredients
+                </p>
+              </Card>
+              <Card className="text-center p-4 border-2 border-orange-200 dark:border-orange-800">
+                <div className="bg-gradient-to-br from-orange-500 to-amber-600 w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <h3 className="text-sm font-semibold mb-1">AI-Powered</h3>
+                <p className="text-xs text-muted-foreground">
+                  Auto-tagging
+                </p>
+              </Card>
+            </div>
           </div>
         </div>
       </section>
+
+      {/* Vertical Scrolling Recipe Feed - Full Width */}
+      {!loading && recipes.length > 0 && (
+        <section className="w-full py-8">
+          <div className="container mx-auto px-4">
+            <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8">
+              Discover Amazing Recipes
+            </h2>
+            <div
+              ref={scrollContainerRef}
+              className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 xl:columns-6 gap-4 max-h-[70vh] overflow-y-auto mx-auto"
+              style={{ 
+                scrollbarWidth: 'thin', 
+                scrollbarColor: '#f97316 transparent',
+                columnFill: 'balance'
+              }}
+            >
+              {[...recipes, ...recipes].map((recipe, index) => {
+                // Vary image heights for mosaic effect
+                const imageHeights = ['h-36', 'h-44', 'h-40', 'h-48', 'h-32', 'h-52'];
+                const imageHeight = imageHeights[index % imageHeights.length];
+                
+                return (
+                  <Card
+                    key={`${recipe.id}-${index}`}
+                    className="break-inside-avoid mb-4 overflow-hidden group cursor-pointer hover:shadow-lg transition-all duration-300"
+                  >
+                    <div className={`w-full ${imageHeight} overflow-hidden bg-gray-100 dark:bg-gray-800`}>
+                      <img
+                        src={recipe.thumbnailUrl}
+                        alt={recipe.dishName}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
+                    </div>
+                    <CardContent className="p-3">
+                      <h3 className="font-semibold text-sm line-clamp-2 mb-1.5">
+                        {recipe.dishName}
+                      </h3>
+                      <p className="text-xs text-muted-foreground line-clamp-3 mb-2">
+                        {recipe.description}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-2 py-1 rounded">
+                          {recipe.cuisineType}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* CTA Section */}
       <section className="py-16 sm:py-24 bg-gradient-to-r from-orange-500 to-amber-600 text-white">
