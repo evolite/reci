@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <defs>
+    <linearGradient id="chefGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f97316;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d97706;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <path d="M6 13h12" stroke="url(#chefGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12 7v13" stroke="url(#chefGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12 7a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v.5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V7Z" fill="url(#chefGradient)" stroke="url(#chefGradient)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12 7a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v.5a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2V7Z" fill="url(#chefGradient)" stroke="url(#chefGradient)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M5 20v-8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8" fill="url(#chefGradient)" stroke="url(#chefGradient)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6 18h12" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+</svg>
