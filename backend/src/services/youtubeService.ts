@@ -27,10 +27,10 @@ export function extractVideoId(url: string): string | null {
 // Helper function to extract metadata from HTML
 function extractMetadataFromHtml(html: string, $: cheerio.CheerioAPI, videoId: string): { title: string; description: string; thumbnailUrl: string } {
   // Extract title - try multiple sources
-  let title = $('meta[property="og:title"]').attr('content')?.trim() || 
-              $('meta[name="title"]').attr('content')?.trim() ||
-              $('title').first().text().replace(/\s*-\s*YouTube\s*$/, '').trim() ||
-              'Untitled';
+  const ogTitle = $('meta[property="og:title"]').attr('content')?.trim();
+  const metaTitle = $('meta[name="title"]').attr('content')?.trim();
+  const pageTitle = $('title').first().text().replace(/\s*-\s*YouTube\s*$/, '').trim();
+  let title = ogTitle || metaTitle || pageTitle || 'Untitled';
 
   // Extract description - try multiple sources
   let description = $('meta[property="og:description"]').attr('content')?.trim() || 
