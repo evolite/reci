@@ -22,8 +22,12 @@ export async function analyzeRecipe(
     ? comments.slice(0, 5).map(c => sanitizeInput(c, 2000))
     : [];
 
-  const commentsText = sanitizedComments.length > 0
-    ? `\n\nTop Comments from viewers (these often contain full recipes):\n${sanitizedComments.map((c, i) => `${i + 1}. ${c}`).join('\n\n')}`
+  // Build comments text to avoid nested template literals
+  const commentsList = sanitizedComments.length > 0
+    ? sanitizedComments.map((c, i) => `${i + 1}. ${c}`).join('\n\n')
+    : '';
+  const commentsText = commentsList
+    ? `\n\nTop Comments from viewers (these often contain full recipes):\n${commentsList}`
     : '';
 
   const prompt = `Analyze the following YouTube video about a recipe and extract ALL relevant information. Return ONLY a valid JSON object with no additional text.

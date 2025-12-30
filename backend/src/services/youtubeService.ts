@@ -51,7 +51,7 @@ function extractMetadataFromHtml(html: string, $: cheerio.CheerioAPI, videoId: s
     ];
     
     for (const match of titleMatches) {
-      if (match && match[1] && !match[1].includes('YouTube')) {
+      if (match?.[1] && !match[1].includes('YouTube')) {
         title = match[1].trim();
         break;
       }
@@ -65,7 +65,7 @@ function extractMetadataFromHtml(html: string, $: cheerio.CheerioAPI, videoId: s
     ];
     
     for (const match of descMatches) {
-      if (match && match[1]) {
+      if (match?.[1]) {
         description = match[1].trim();
         break;
       }

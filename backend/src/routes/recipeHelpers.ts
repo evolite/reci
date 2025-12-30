@@ -4,13 +4,22 @@ import { analyzeRecipeFromText } from '../services/openaiService';
 // Helper function to clean instructions text
 export function cleanInstructions(instructions: string): string {
   let cleaned = instructions;
+  
   // Remove "Ingredients:" headings and everything until "Instructions:" or "Steps:" or "Method:" or "Directions:"
-  cleaned = cleaned.replace(/^Ingredients?:?\s*\n.*?(?=\n(?:Instructions?|Steps?|Method|Directions?|$))/ims, '');
+  const ingredientsPattern = /^Ingredients?:?\s*\n.*?(?=\n(?:Instructions?|Steps?|Method|Directions?|$))/ims;
+  cleaned = cleaned.replace(ingredientsPattern, '');
   cleaned = cleaned.replace(/^.*?Ingredients?:?\s*\n.*?(?=\n(?:Instructions?|Steps?|Method|Directions?|$))/ims, '');
+  
   // Remove bullet points or numbered lists that look like ingredients (contain measurements)
-  cleaned = cleaned.replace(/^[\s]*[•\-\*]\s*[\d\/\s]+(?:oz|cup|cups|tbsp|tsp|lb|pound|ounce|fl\s*oz|g|kg|ml|dl|l)[\s\w\s,()]+$/gim, '');
-  // Remove lines that start with numbers/letters followed by measurements (common ingredient list format)
-  cleaned = cleaned.replace(/^[\s]*[\d\w]+\.?\s+[\d\/\s]+(?:oz|cup|cups|tbsp|tsp|lb|pound|ounce|fl\s*oz|g|kg|ml|dl|l)[\s\w\s,()]+$/gim, '');
+  // Simplified regex: removed unnecessary escapes and character class duplicates
+  const measurementUnits = '(?:oz|cup|cups|tbsp|tsp|lb|pound|ounce|fl\\s*oz|g|kg|ml|dl|l)';
+  const bulletPattern = new RegExp(`^[\\s]*[•\\-*]\\s*[\\d/\\s]+${measurementUnits}[\\s\\w\\s,()]+$`, 'gim');
+  cleaned = cleaned.replace(bulletPattern, '');
+  
+  // Remove lines that start with numbers/letters followed by measurements
+  const numberedPattern = new RegExp(`^[\\s]*[\\d\\w]+\\.?\\s+[\\d/\\s]+${measurementUnits}[\\s\\w\\s,()]+$`, 'gim');
+  cleaned = cleaned.replace(numberedPattern, '');
+  
   // Remove any remaining "Ingredients:" text
   cleaned = cleaned.replace(/Ingredients?:?\s*/gi, '');
   return cleaned.trim();
