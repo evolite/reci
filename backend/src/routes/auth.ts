@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { hashPassword, verifyPassword, generateToken, generateVerificationToken, generateResetToken } from '../services/authService';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { validateInviteToken, isFirstUser } from './authHelpers';
+import { validateEmail, validatePassword, normalizeEmail } from '../utils/validation';
 
 const router = Router();
 
@@ -11,9 +12,19 @@ router.post('/register', async (req: Request, res: Response) => {
   try {
     const { email, password, name, inviteToken } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+    // Validate email
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      return res.status(400).json({ error: emailValidation.error });
     }
+
+    // Validate password
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({ error: passwordValidation.error });
+    }
+
+    const normalizedEmail = normalizeEmail(email);
 
     // Check if this is the first user (no invite needed)
     const firstUser = await isFirstUser();
@@ -21,7 +32,7 @@ router.post('/register', async (req: Request, res: Response) => {
     
     if (!firstUser) {
       // Not first user - validate invite token
-      const validation = await validateInviteToken(inviteToken || '', email);
+      const validation = await validateInviteToken(inviteToken || '', normalizedEmail);
       if (!validation.valid) {
         return res.status(400).json({ error: validation.error });
       }
@@ -34,7 +45,7 @@ router.post('/register', async (req: Request, res: Response) => {
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     });
 
     if (existingUser) {
@@ -50,9 +61,9 @@ router.post('/register', async (req: Request, res: Response) => {
     // Create user
     const user = await prisma.user.create({
       data: {
-        email,
+        email: normalizedEmail,
         passwordHash,
-        name: name || null,
+        name: name ? name.trim().substring(0, 100) : null, // Sanitize name
         isAdmin,
         emailVerificationToken: generateVerificationToken(),
       },

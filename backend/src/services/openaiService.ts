@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { RecipeAnalysis } from '../models/Recipe';
+import { sanitizeInput } from '../utils/validation';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -14,14 +15,21 @@ export async function analyzeRecipe(
     throw new Error('OPENAI_API_KEY is not set');
   }
 
-  const commentsText = comments && comments.length > 0 
-    ? `\n\nTop Comments from viewers (these often contain full recipes):\n${comments.slice(0, 5).map((c, i) => `${i + 1}. ${c}`).join('\n\n')}`
+  // Sanitize inputs to prevent prompt injection
+  const sanitizedTitle = sanitizeInput(title, 500);
+  const sanitizedDescription = sanitizeInput(description.substring(0, 2000), 2000);
+  const sanitizedComments = comments && comments.length > 0 
+    ? comments.slice(0, 5).map(c => sanitizeInput(c, 2000))
+    : [];
+
+  const commentsText = sanitizedComments.length > 0
+    ? `\n\nTop Comments from viewers (these often contain full recipes):\n${sanitizedComments.map((c, i) => `${i + 1}. ${c}`).join('\n\n')}`
     : '';
 
   const prompt = `Analyze the following YouTube video about a recipe and extract ALL relevant information. Return ONLY a valid JSON object with no additional text.
 
-Video Title: ${title}
-Video Description: ${description.substring(0, 2000)}${commentsText}
+Video Title: ${sanitizedTitle}
+Video Description: ${sanitizedDescription}${commentsText}
 
 IMPORTANT: The comments section often contains the FULL RECIPE with ingredients and step-by-step instructions. Pay special attention to comments that list ingredients, measurements, cooking times, temperatures, and step-by-step instructions. Extract the complete recipe text if found.
 
@@ -112,10 +120,13 @@ export async function analyzeRecipeFromText(recipeText: string): Promise<RecipeA
     throw new Error('OPENAI_API_KEY is not set');
   }
 
+  // Sanitize input to prevent prompt injection
+  const sanitizedRecipeText = sanitizeInput(recipeText, 50000); // Max 50KB for recipe text
+
   const prompt = `Analyze the following recipe text and extract ALL relevant information. IMPORTANT: Convert ALL measurements to European/metric units.
 
 Recipe Text:
-${recipeText}
+${sanitizedRecipeText}
 
 IMPORTANT CONVERSION RULES:
 - Convert all liquid volumes to milliliters (ml), deciliters (dl), or liters (L)

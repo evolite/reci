@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
+import { validateEmail, normalizeEmail } from '../utils/validation';
 
 const router = Router();
 
@@ -8,13 +9,17 @@ router.post('/', async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
 
-    if (!email || typeof email !== 'string' || !email.includes('@')) {
-      return res.status(400).json({ error: 'Valid email is required' });
+    // Validate email
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      return res.status(400).json({ error: emailValidation.error });
     }
+
+    const normalizedEmail = normalizeEmail(email);
 
     // Check if email is already on waitlist
     const existing = await prisma.waitlist.findUnique({
-      where: { email: email.toLowerCase().trim() },
+      where: { email: normalizedEmail },
     });
 
     if (existing) {
@@ -32,7 +37,7 @@ router.post('/', async (req: Request, res: Response) => {
     // Add to waitlist
     const waitlistEntry = await prisma.waitlist.create({
       data: {
-        email: email.toLowerCase().trim(),
+        email: normalizedEmail,
         position,
       },
     });
