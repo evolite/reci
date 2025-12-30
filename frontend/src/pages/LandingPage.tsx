@@ -49,7 +49,7 @@ export function LandingPage() {
       });
   }, []);
 
-  // Auto-scroll recipe mosaic vertically
+  // Auto-scroll recipe feed horizontally infinitely
   useEffect(() => {
     if (!scrollContainerRef.current || recipes.length === 0) return;
 
@@ -58,36 +58,26 @@ export function LandingPage() {
     const scrollSpeed = 0.5; // pixels per frame
     let animationId: number | null = null;
     let isPaused = false;
-    let lastTime = performance.now();
 
-    const scroll = (currentTime: number) => {
+    const scroll = () => {
       if (isPaused) {
-        lastTime = currentTime;
         animationId = requestAnimationFrame(scroll);
         return;
       }
       
-      const deltaTime = currentTime - lastTime;
-      lastTime = currentTime;
+      scrollPosition += scrollSpeed;
+      const maxScroll = container.scrollWidth - container.clientWidth;
       
-      scrollPosition += scrollSpeed * (deltaTime / 16); // Normalize to 60fps
-      const maxScroll = container.scrollHeight - container.clientHeight;
-      
+      // Reset to start for seamless infinite loop
       if (scrollPosition >= maxScroll) {
-        scrollPosition = 0; // Reset to start for seamless loop
-        container.scrollTop = 0;
-      } else {
-        container.scrollTop = scrollPosition;
+        scrollPosition = 0;
       }
       
+      container.scrollLeft = scrollPosition;
       animationId = requestAnimationFrame(scroll);
     };
 
-    // Wait a bit before starting scroll
-    const startTimeout = setTimeout(() => {
-      lastTime = performance.now();
-      animationId = requestAnimationFrame(scroll);
-    }, 1000);
+    animationId = requestAnimationFrame(scroll);
 
     // Pause on hover
     const handleMouseEnter = () => {
@@ -95,7 +85,6 @@ export function LandingPage() {
     };
     const handleMouseLeave = () => {
       isPaused = false;
-      lastTime = performance.now();
       if (animationId === null) {
         animationId = requestAnimationFrame(scroll);
       }
@@ -105,7 +94,6 @@ export function LandingPage() {
     container.addEventListener('mouseleave', handleMouseLeave);
 
     return () => {
-      clearTimeout(startTimeout);
       if (animationId !== null) {
         cancelAnimationFrame(animationId);
       }
@@ -225,55 +213,78 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Vertical Scrolling Recipe Feed - Full Width */}
+      {/* Horizontal Scrolling Recipe Feed - Full Width */}
       {!loading && recipes.length > 0 && (
-        <section className="w-full py-8">
+        <section className="w-full py-12 bg-gradient-to-r from-orange-500 to-amber-600">
           <div className="container mx-auto px-4">
-            <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 text-white">
               Discover Amazing Recipes
             </h2>
             <div
               ref={scrollContainerRef}
-              className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 xl:columns-6 gap-4 max-h-[70vh] overflow-y-auto mx-auto"
-              style={{ 
-                scrollbarWidth: 'thin', 
-                scrollbarColor: '#f97316 transparent',
-                columnFill: 'balance'
-              }}
+              className="flex gap-6 overflow-x-hidden"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-              {[...recipes, ...recipes].map((recipe, index) => {
-                // Vary image heights for mosaic effect
-                const imageHeights = ['h-36', 'h-44', 'h-40', 'h-48', 'h-32', 'h-52'];
-                const imageHeight = imageHeights[index % imageHeights.length];
-                
-                return (
-                  <Card
-                    key={`${recipe.id}-${index}`}
-                    className="break-inside-avoid mb-4 overflow-hidden group cursor-pointer hover:shadow-lg transition-all duration-300"
-                  >
-                    <div className={`w-full ${imageHeight} overflow-hidden bg-gray-100 dark:bg-gray-800`}>
-                      <img
-                        src={recipe.thumbnailUrl}
-                        alt={recipe.dishName}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                      />
+              <style>{`
+                div[ref="${scrollContainerRef}"]::-webkit-scrollbar {
+                  display: none;
+                }
+              `}</style>
+              {recipes.map((recipe) => (
+                <Card
+                  key={recipe.id}
+                  className="flex-shrink-0 w-72 sm:w-80 overflow-hidden group cursor-pointer hover:scale-105 transition-transform duration-300 bg-white dark:bg-gray-800"
+                >
+                  <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
+                    <img
+                      src={recipe.thumbnailUrl}
+                      alt={recipe.dishName}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                  </div>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold text-sm sm:text-base line-clamp-2 mb-1">
+                      {recipe.dishName}
+                    </h3>
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {recipe.description}
+                    </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-xs bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-2 py-1 rounded">
+                        {recipe.cuisineType}
+                      </span>
                     </div>
-                    <CardContent className="p-3">
-                      <h3 className="font-semibold text-sm line-clamp-2 mb-1.5">
-                        {recipe.dishName}
-                      </h3>
-                      <p className="text-xs text-muted-foreground line-clamp-3 mb-2">
-                        {recipe.description}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-2 py-1 rounded">
-                          {recipe.cuisineType}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                  </CardContent>
+                </Card>
+              ))}
+              {/* Duplicate recipes for seamless infinite loop */}
+              {recipes.map((recipe) => (
+                <Card
+                  key={`${recipe.id}-dup`}
+                  className="flex-shrink-0 w-72 sm:w-80 overflow-hidden group cursor-pointer hover:scale-105 transition-transform duration-300 bg-white dark:bg-gray-800"
+                >
+                  <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
+                    <img
+                      src={recipe.thumbnailUrl}
+                      alt={recipe.dishName}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                  </div>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold text-sm sm:text-base line-clamp-2 mb-1">
+                      {recipe.dishName}
+                    </h3>
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {recipe.description}
+                    </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-xs bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-2 py-1 rounded">
+                        {recipe.cuisineType}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
         </section>
