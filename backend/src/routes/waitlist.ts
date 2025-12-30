@@ -58,8 +58,16 @@ router.get('/position/:email', async (req: Request, res: Response) => {
   try {
     const { email } = req.params;
 
+    // Validate email
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      return res.status(400).json({ error: emailValidation.error });
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+
     const entry = await prisma.waitlist.findUnique({
-      where: { email: email.toLowerCase().trim() },
+      where: { email: normalizedEmail },
     });
 
     if (!entry) {
