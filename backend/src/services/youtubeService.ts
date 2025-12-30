@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import { findCommentsInObject } from './youtubeServiceHelpers';
 
 export interface YouTubeVideoMetadata {
   title: string;
@@ -21,43 +22,6 @@ export function extractVideoId(url: string): string | null {
   }
 
   return null;
-}
-
-// Helper function to extract comments from nested object structure
-function findCommentsInObject(obj: any, depth = 0): string[] {
-  if (depth > 10) return []; // Prevent infinite recursion
-  const comments: string[] = [];
-  
-  if (typeof obj === 'string' && obj.length > 50 && obj.length < 2000) {
-    // Check if it looks like a recipe comment
-    const recipeKeywords = ['ingredient', 'recipe', 'cook', 'bake', 'mix', 'cup', 'tbsp', 'tsp', 'minute', 'hour', 'step', 'instruction'];
-    const lowerText = obj.toLowerCase();
-    if (recipeKeywords.some(keyword => lowerText.includes(keyword))) {
-      comments.push(obj);
-    }
-  } else if (Array.isArray(obj)) {
-    for (const item of obj) {
-      comments.push(...findCommentsInObject(item, depth + 1));
-    }
-  } else if (obj && typeof obj === 'object') {
-    // Check for comment text in common YouTube data structures
-    if (obj.text && typeof obj.text === 'string' && obj.text.length > 50) {
-      comments.push(obj.text);
-    }
-    if (obj.content && typeof obj.content === 'string' && obj.content.length > 50) {
-      comments.push(obj.content);
-    }
-    if (obj.simpleText && typeof obj.simpleText === 'string' && obj.simpleText.length > 50) {
-      comments.push(obj.simpleText);
-    }
-    
-    // Recursively search nested objects
-    for (const value of Object.values(obj)) {
-      comments.push(...findCommentsInObject(value, depth + 1));
-    }
-  }
-  
-  return comments;
 }
 
 // Helper function to extract metadata from HTML

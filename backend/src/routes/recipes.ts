@@ -263,91 +263,56 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Recipe not found' });
     }
 
-    const updateData: any = {};
-    let analyzedInstructions = false; // Track if we've set instructions from analysis
-    
-    // If instructions is provided and different from existing, analyze it to update other fields
-    // BUT only if instructions were previously empty (i.e., pasting from new page)
-    // If instructions already existed, it's an edit, so don't analyze
-    if (instructions !== undefined) {
-      const newInstructions = instructions === null || instructions === '' ? null : String(instructions);
-      const existingInstructions = existing.instructions || '';
+    // Prepare update data from request body
+    let updateData: any;
+    try {
+      const prepared = prepareUpdateData({ description, dishName, cuisineType, ingredients, instructions, tags });
+      updateData = prepared.updateData;
       
-      // If instructions were previously empty/null and now have content, analyze it (new page paste)
-      // If instructions already existed, just save without analysis (edit mode)
-      if (!existingInstructions && newInstructions && newInstructions.trim().length > 50) {
-        try {
-          const analysis = await analyzeRecipeFromText(newInstructions);
+      // If instructions is provided and were previously empty, analyze it
+      if (prepared.hasInstructions && prepared.instructionsValue) {
+        const existingInstructions = existing.instructions || '';
+        const newInstructions = prepared.instructionsValue;
+        
+        // Only analyze if instructions were previously empty and new content is substantial
+        if (!existingInstructions && newInstructions.trim().length > 50) {
+          const analysisResult = await analyzeAndUpdateRecipe(newInstructions, {
+            description: existing.description,
+            tags: existing.tags || [],
+          });
           
-          // Auto-update fields from analysis if they weren't explicitly provided
-          if (description === undefined) updateData.description = analysis.enhancedDescription || existing.description;
-          if (dishName === undefined) updateData.dishName = analysis.dishName;
-          if (cuisineType === undefined) updateData.cuisineType = analysis.cuisineType;
-          
-          // Use the extracted ingredients from analysis - this is the key fix
-          if (analysis.ingredients && analysis.ingredients.length > 0) {
-            updateData.ingredients = analysis.ingredients;
+          // Merge analysis results, but don't override explicitly provided fields
+          if (description === undefined && analysisResult.description) {
+            updateData.description = analysisResult.description;
           }
-          
-          // Use the extracted instructions from analysis (already cleaned by OpenAI)
-          if (analysis.instructions) {
-            // Additional cleaning to ensure no ingredient lists remain
-            let cleanedInstructions = analysis.instructions;
-            // Remove "Ingredients:" headings and everything until "Instructions:" or "Steps:" or "Method:" or "Directions:"
-            cleanedInstructions = cleanedInstructions.replace(/^Ingredients?:?\s*\n.*?(?=\n(?:Instructions?|Steps?|Method|Directions?|$))/ims, '');
-            cleanedInstructions = cleanedInstructions.replace(/^.*?Ingredients?:?\s*\n.*?(?=\n(?:Instructions?|Steps?|Method|Directions?|$))/ims, '');
-            // Remove bullet points or numbered lists that look like ingredients (contain measurements)
-            cleanedInstructions = cleanedInstructions.replace(/^[\s]*[•\-\*]\s*[\d\/\s]+(?:oz|cup|cups|tbsp|tsp|lb|pound|ounce|fl\s*oz|g|kg|ml|dl|l)[\s\w\s,()]+$/gim, '');
-            // Remove lines that start with numbers/letters followed by measurements (common ingredient list format)
-            cleanedInstructions = cleanedInstructions.replace(/^[\s]*[\d\w]+\.?\s+[\d\/\s]+(?:oz|cup|cups|tbsp|tsp|lb|pound|ounce|fl\s*oz|g|kg|ml|dl|l)[\s\w\s,()]+$/gim, '');
-            // Remove any remaining "Ingredients:" text
-            cleanedInstructions = cleanedInstructions.replace(/Ingredients?:?\s*/gi, '');
-            updateData.instructions = cleanedInstructions.trim();
-            analyzedInstructions = true; // Mark that we've set cleaned instructions
+          if (dishName === undefined && analysisResult.dishName) {
+            updateData.dishName = analysisResult.dishName;
           }
-          
-          // Merge suggested tags with existing tags
-          if (tags === undefined) {
-            const existingTags = existing.tags || [];
-            const suggestedTags = analysis.suggestedTags || [];
-            updateData.tags = [...new Set([...existingTags, ...suggestedTags])];
+          if (cuisineType === undefined && analysisResult.cuisineType) {
+            updateData.cuisineType = analysisResult.cuisineType;
           }
-        } catch (error) {
-          console.error('Error analyzing recipe:', error);
-          // Continue with manual update even if analysis fails
-          if (newInstructions) {
-            updateData.instructions = newInstructions;
-            analyzedInstructions = true;
+          if (ingredients === undefined && analysisResult.ingredients) {
+            updateData.ingredients = analysisResult.ingredients;
           }
-        }
-      } else {
-        // Instructions already existed (edit mode) or too short - just save without analysis
-        if (newInstructions !== undefined) {
+          if (analysisResult.instructions) {
+            updateData.instructions = analysisResult.instructions;
+          }
+          if (tags === undefined && analysisResult.tags) {
+            updateData.tags = analysisResult.tags;
+          }
+        } else {
+          // Instructions already existed or too short - just save
           updateData.instructions = newInstructions;
-          analyzedInstructions = true;
         }
+      } else if (prepared.hasInstructions) {
+        // Instructions is null or empty
+        updateData.instructions = null;
       }
-    }
-    
-    // Handle explicit field updates (these override auto-updates)
-    if (description !== undefined) updateData.description = String(description);
-    if (dishName !== undefined) updateData.dishName = String(dishName);
-    if (cuisineType !== undefined) updateData.cuisineType = String(cuisineType);
-    if (ingredients !== undefined) {
-      if (!Array.isArray(ingredients)) {
-        return res.status(400).json({ error: 'ingredients must be an array' });
+    } catch (validationError) {
+      if (validationError instanceof Error) {
+        return res.status(400).json({ error: validationError.message });
       }
-      updateData.ingredients = ingredients.filter((ing: any) => typeof ing === 'string' && ing.trim().length > 0);
-    }
-    // Only override instructions if we haven't already set them from analysis
-    if (instructions !== undefined && !analyzedInstructions) {
-      updateData.instructions = instructions === null || instructions === '' ? null : String(instructions);
-    }
-    if (tags !== undefined) {
-      if (!Array.isArray(tags)) {
-        return res.status(400).json({ error: 'tags must be an array' });
-      }
-      updateData.tags = tags.filter((tag: any) => typeof tag === 'string' && tag.trim().length > 0);
+      throw validationError;
     }
 
     if (Object.keys(updateData).length === 0) {
