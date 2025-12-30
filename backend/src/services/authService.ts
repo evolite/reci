@@ -19,13 +19,25 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export function generateToken(userId: string): string {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'] });
+  if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured');
+  }
+  const options: jwt.SignOptions = {
+    expiresIn: JWT_EXPIRES_IN,
+  };
+  return jwt.sign({ userId }, JWT_SECRET, options);
 }
 
 export function verifyToken(token: string): { userId: string } | null {
+  if (!JWT_SECRET) {
+    return null;
+  }
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    return decoded;
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (typeof decoded === 'object' && decoded !== null && 'userId' in decoded) {
+      return decoded as { userId: string };
+    }
+    return null;
   } catch (error) {
     return null;
   }
