@@ -22,10 +22,7 @@ export function generateToken(userId: string): string {
   if (!JWT_SECRET) {
     throw new Error('JWT_SECRET is not configured');
   }
-  const options: jwt.SignOptions = {
-    expiresIn: JWT_EXPIRES_IN as string,
-  };
-  return jwt.sign({ userId }, JWT_SECRET, options);
+  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
 export function verifyToken(token: string): { userId: string } | null {
