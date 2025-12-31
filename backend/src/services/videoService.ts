@@ -423,6 +423,27 @@ function extractImageUrl(image: unknown): string | null {
 }
 
 /**
+ * Helper function to update result with item data if conditions are met
+ */
+function updateResultFromItem(
+  item: any,
+  result: { title: string; description: string; thumbnailUrl: string },
+  titleField: 'name' | 'headline'
+): void {
+  const titleValue = item[titleField];
+  if (titleValue && (!result.title || result.title === 'Untitled')) {
+    result.title = titleValue;
+  }
+  if (item.description && !result.description) {
+    result.description = item.description;
+  }
+  const imageUrl = extractImageUrl(item.image);
+  if (imageUrl && !result.thumbnailUrl) {
+    result.thumbnailUrl = imageUrl;
+  }
+}
+
+/**
  * Helper function to process a single JSON-LD item for recipe extraction
  */
 function processJsonLdRecipeItem(item: any, result: { title: string; description: string; thumbnailUrl: string }): void {
@@ -431,29 +452,11 @@ function processJsonLdRecipeItem(item: any, result: { title: string; description
   const isArticleOrWebPage = itemType === 'Article' || itemType === 'WebPage';
   
   if (isRecipe) {
-    if (item.name && (!result.title || result.title === 'Untitled')) {
-      result.title = item.name;
-    }
-    if (item.description && !result.description) {
-      result.description = item.description;
-    }
-    const imageUrl = extractImageUrl(item.image);
-    if (imageUrl && !result.thumbnailUrl) {
-      result.thumbnailUrl = imageUrl;
-    }
+    updateResultFromItem(item, result, 'name');
   }
   
   if (isArticleOrWebPage) {
-    if (item.headline && (!result.title || result.title === 'Untitled')) {
-      result.title = item.headline;
-    }
-    if (item.description && !result.description) {
-      result.description = item.description;
-    }
-    const imageUrl = extractImageUrl(item.image);
-    if (imageUrl && !result.thumbnailUrl) {
-      result.thumbnailUrl = imageUrl;
-    }
+    updateResultFromItem(item, result, 'headline');
   }
 }
 

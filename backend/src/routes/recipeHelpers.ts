@@ -20,8 +20,16 @@ export function cleanInstructions(instructions: string): string {
   // Use negated character class [^\n] instead of . to avoid backtracking issues
   const ingredientsPattern = /^Ingredients?:?\s*\n[^\n]{0,5000}(?=\n(?:Instructions?|Steps?|Method|Directions?|$))/ims;
   let cleanedSection = searchSection.replace(ingredientsPattern, '');
-  cleanedSection = cleanedSection.replace(/^[^\n]{0,5000}Ingredients?:?\s*\n[^\n]{0,5000}(?=\n(?:Instructions?|Steps?|Method|Directions?|$))/ims, '');
+  const ingredientsPattern2 = /^[^\n]{0,5000}Ingredients?:?\s*\n[^\n]{0,5000}(?=\n(?:Instructions?|Steps?|Method|Directions?|$))/ims;
+  cleanedSection = cleanedSection.replace(ingredientsPattern2, '');
   cleaned = cleanedSection + restSection;
+  
+  // Helper function to check if a line contains measurement units
+  const hasMeasurementUnit = (text: string): boolean => {
+    const units = ['oz', 'cup', 'cups', 'tbsp', 'tsp', 'lb', 'pound', 'ounce', 'fl oz', 'g', 'kg', 'ml', 'dl', 'l'];
+    const lowerText = text.toLowerCase();
+    return units.some(unit => lowerText.includes(unit));
+  };
   
   // Remove bullet points or numbered lists that look like ingredients (contain measurements)
   // Use more specific patterns with bounded quantifiers to prevent backtracking
@@ -31,14 +39,17 @@ export function cleanInstructions(instructions: string): string {
     // Limit line length before regex matching
     if (line.length > 500) return true; // Keep long lines (likely not ingredient lines)
     
-    // More specific pattern: bullet + whitespace + digits/slashes (bounded) + unit + text (bounded)
-    // Simplified regex to reduce complexity: use \d instead of [\d/\s] and remove duplicate character classes
-    const bulletMatch = /^\s*[•\-*]\s+\d{0,20}(?:\/\d{0,20})?\s{0,20}(?:oz|cup|cups|tbsp|tsp|lb|pound|ounce|fl\s*oz|g|kg|ml|dl|l)[\w\s,()]{0,200}$/i.test(line);
+    // Check if line has measurement units first
+    if (!hasMeasurementUnit(line)) return true;
+    
+    // More specific pattern: bullet + whitespace + digits/slashes (bounded)
+    // Simplified regex by extracting unit matching
+    const bulletMatch = /^\s*[•\-*]\s+\d{0,20}(?:\/\d{0,20})?\s{0,20}/i.test(line);
     if (bulletMatch) return false;
     
-    // More specific pattern: start + digits/letters (bounded) + dot + whitespace + digits/slashes (bounded) + unit + text (bounded)
-    // Simplified regex to reduce complexity: use \d instead of [\d\w] and [\d/\s], remove duplicate character classes
-    const numberedMatch = /^\s*\d{0,10}\.?\s+\d{0,20}(?:\/\d{0,20})?\s{0,20}(?:oz|cup|cups|tbsp|tsp|lb|pound|ounce|fl\s*oz|g|kg|ml|dl|l)[\w\s,()]{0,200}$/i.test(line);
+    // More specific pattern: start + digits (bounded) + dot + whitespace + digits/slashes (bounded)
+    // Simplified regex by extracting unit matching
+    const numberedMatch = /^\s*\d{0,10}\.?\s+\d{0,20}(?:\/\d{0,20})?\s{0,20}/i.test(line);
     if (numberedMatch) return false;
     
     return true;
