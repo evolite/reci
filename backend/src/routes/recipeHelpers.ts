@@ -2,22 +2,40 @@ import { analyzeRecipeFromText } from '../services/openaiService';
 
 // Helper function to clean instructions text
 export function cleanInstructions(instructions: string): string {
+  // Limit input length to prevent DoS attacks
+  const MAX_INPUT_LENGTH = 100000;
+  if (instructions.length > MAX_INPUT_LENGTH) {
+    instructions = instructions.substring(0, MAX_INPUT_LENGTH);
+  }
+  
   let cleaned = instructions;
   
   // Remove "Ingredients:" headings and everything until "Instructions:" or "Steps:" or "Method:" or "Directions:"
-  const ingredientsPattern = /^Ingredients?:?\s*\n.*?(?=\n(?:Instructions?|Steps?|Method|Directions?|$))/ims;
+  // Use non-greedy quantifier with explicit limit to prevent catastrophic backtracking
+  const ingredientsPattern = /^Ingredients?:?\s*\n.{0,5000}?(?=\n(?:Instructions?|Steps?|Method|Directions?|$))/ims;
   cleaned = cleaned.replace(ingredientsPattern, '');
-  cleaned = cleaned.replace(/^.*?Ingredients?:?\s*\n.*?(?=\n(?:Instructions?|Steps?|Method|Directions?|$))/ims, '');
+  cleaned = cleaned.replace(/^.{0,5000}?Ingredients?:?\s*\n.{0,5000}?(?=\n(?:Instructions?|Steps?|Method|Directions?|$))/ims, '');
   
   // Remove bullet points or numbered lists that look like ingredients (contain measurements)
-  // Simplified regex: removed unnecessary escapes and character class duplicates
+  // Use more specific patterns with bounded quantifiers to prevent backtracking
   const measurementUnits = String.raw`(?:oz|cup|cups|tbsp|tsp|lb|pound|ounce|fl\s*oz|g|kg|ml|dl|l)`;
-  const bulletPattern = new RegExp(String.raw`^[\s]*[•\-*]\s*[\d/\s]+${measurementUnits}[\s\w\s,()]+$`, 'gim');
-  cleaned = cleaned.replaceAll(bulletPattern, '');
-  
-  // Remove lines that start with numbers/letters followed by measurements
-  const numberedPattern = new RegExp(String.raw`^[\s]*[\d\w]+\.?\s+[\d/\s]+${measurementUnits}[\s\w\s,()]+$`, 'gim');
-  cleaned = cleaned.replaceAll(numberedPattern, '');
+  // Split into lines and process individually to avoid regex DoS
+  const lines = cleaned.split('\n');
+  const filteredLines = lines.filter(line => {
+    // Limit line length before regex matching
+    if (line.length > 500) return true; // Keep long lines (likely not ingredient lines)
+    
+    // More specific pattern: bullet + whitespace + digits/slashes (bounded) + unit + text (bounded)
+    const bulletMatch = /^[\s]*[•\-*]\s+[\d/\s]{0,20}(?:oz|cup|cups|tbsp|tsp|lb|pound|ounce|fl\s*oz|g|kg|ml|dl|l)[\w\s,()]{0,200}$/i.test(line);
+    if (bulletMatch) return false;
+    
+    // More specific pattern: start + digits/letters (bounded) + dot + whitespace + digits/slashes (bounded) + unit + text (bounded)
+    const numberedMatch = /^[\s]*[\d\w]{0,10}\.?\s+[\d/\s]{0,20}(?:oz|cup|cups|tbsp|tsp|lb|pound|ounce|fl\s*oz|g|kg|ml|dl|l)[\w\s,()]{0,200}$/i.test(line);
+    if (numberedMatch) return false;
+    
+    return true;
+  });
+  cleaned = filteredLines.join('\n');
   
   // Remove any remaining "Ingredients:" text
   cleaned = cleaned.replaceAll(/Ingredients?:?\s*/gi, '');

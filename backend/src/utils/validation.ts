@@ -65,24 +65,15 @@ export function sanitizeInput(input: string, maxLength: number = 10000): string 
     return '';
   }
 
+  // Limit input length first to prevent DoS attacks
+  let sanitized = input.length > maxLength ? input.substring(0, maxLength) : input;
+
   // Remove null bytes and control characters (except newlines and tabs for recipe text)
   // Exclude \u0009 (tab) and \u000A (newline) from removal
-  // Construct regex pattern using character codes to avoid control character detection
-  const controlCharPattern = new RegExp(
-    '[' +
-    String.fromCodePoint(0x0000) + '-' + String.fromCodePoint(0x0008) + // \u0000-\u0008
-    String.fromCodePoint(0x000B) + '-' + String.fromCodePoint(0x000C) + // \u000B-\u000C
-    String.fromCodePoint(0x000E) + '-' + String.fromCodePoint(0x001F) + // \u000E-\u001F
-    String.fromCodePoint(0x007F) + // \u007F
-    ']',
-    'g'
-  );
-  let sanitized = input.replaceAll(controlCharPattern, '');
-  
-  // Limit length
-  if (sanitized.length > maxLength) {
-    sanitized = sanitized.substring(0, maxLength);
-  }
+  // Use literal regex pattern for better performance and to avoid regex DoS
+  // Pattern matches: \u0000-\u0008, \u000B-\u000C, \u000E-\u001F, \u007F
+  const controlCharPattern = /[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g;
+  sanitized = sanitized.replaceAll(controlCharPattern, '');
 
   return sanitized;
 }
