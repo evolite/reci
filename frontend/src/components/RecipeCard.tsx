@@ -389,7 +389,12 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
                   ))}
                 </div>
                 <Form {...tagForm}>
-                  <form onSubmit={tagForm.handleSubmit(handleAddTag)} onKeyDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} className="flex gap-1">
+                  <form 
+                    onSubmit={tagForm.handleSubmit(handleAddTag)} 
+                    onKeyDown={(e) => e.stopPropagation()} 
+                    onClick={(e) => e.stopPropagation()} 
+                    className="flex gap-1"
+                  >
                     <FormField
                       control={tagForm.control}
                       name="tag"

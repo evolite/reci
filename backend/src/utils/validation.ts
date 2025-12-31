@@ -70,10 +70,10 @@ export function sanitizeInput(input: string, maxLength: number = 10000): string 
   // Construct regex pattern using character codes to avoid control character detection
   const controlCharPattern = new RegExp(
     '[' +
-    String.fromCharCode(0x0000) + '-' + String.fromCharCode(0x0008) + // \u0000-\u0008
-    String.fromCharCode(0x000B) + '-' + String.fromCharCode(0x000C) + // \u000B-\u000C
-    String.fromCharCode(0x000E) + '-' + String.fromCharCode(0x001F) + // \u000E-\u001F
-    String.fromCharCode(0x007F) + // \u007F
+    String.fromCodePoint(0x0000) + '-' + String.fromCodePoint(0x0008) + // \u0000-\u0008
+    String.fromCodePoint(0x000B) + '-' + String.fromCodePoint(0x000C) + // \u000B-\u000C
+    String.fromCodePoint(0x000E) + '-' + String.fromCodePoint(0x001F) + // \u000E-\u001F
+    String.fromCodePoint(0x007F) + // \u007F
     ']',
     'g'
   );
