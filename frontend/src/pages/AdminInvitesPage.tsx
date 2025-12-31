@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Spinner } from '@/components/ui/spinner';
-import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingScreen } from '@/components/LoadingScreen';
+import { PageHeader } from '@/components/PageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from '@/components/ui/empty';
@@ -25,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ChefHat, AlertCircle, Plus, Trash2, Copy, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, Plus, Trash2, Copy, CheckCircle2, Users } from 'lucide-react';
 
 interface InviteFormValues {
   email: string;
@@ -136,40 +136,26 @@ export function AdminInvitesPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Spinner className="h-8 w-8 text-orange-500" />
-          <Skeleton className="h-4 w-32" />
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-br from-orange-500 to-amber-600 p-2.5 rounded-xl shadow-lg">
-              <ChefHat className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
-                Invite Management
-              </h1>
-              <p className="text-sm text-muted-foreground">Manage user invites</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => navigate('/admin/settings')} variant="outline">
-              Settings
-            </Button>
-            <Button onClick={() => navigate('/')} variant="outline">
-              Back to Recipes
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          title="Invite Management"
+          description="Manage user invites"
+          actions={
+            <>
+              <Button onClick={() => navigate('/admin/settings')} variant="outline">
+                Settings
+              </Button>
+              <Button onClick={() => navigate('/')} variant="outline">
+                Back to Recipes
+              </Button>
+            </>
+          }
+        />
 
         {error && (
           <Alert variant="destructive" className="mb-4">
@@ -350,7 +336,7 @@ export function AdminInvitesPage() {
                         <Empty className="py-12">
                           <EmptyHeader>
                             <EmptyMedia variant="icon">
-                              <ChefHat className="h-6 w-6" />
+                              <Users className="h-6 w-6" />
                             </EmptyMedia>
                             <EmptyTitle>No invites yet</EmptyTitle>
                             <EmptyDescription>

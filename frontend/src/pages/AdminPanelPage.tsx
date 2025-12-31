@@ -3,15 +3,15 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { getInvites, createInvite, deleteInvite, getInviteStats, type Invite, type InviteStats } from '@/lib/api';
-import { getSetting, updateSetting } from '@/lib/api';
-import { getErrorMessage } from '@/lib/utils';
+import { Spinner } from '@/components/ui/spinner';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Spinner } from '@/components/ui/spinner';
-import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingScreen } from '@/components/LoadingScreen';
+import { PageHeader } from '@/components/PageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from '@/components/ui/empty';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -35,22 +35,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChefHat, AlertCircle, Plus, Trash2, Copy, CheckCircle2, Save, Settings, Users } from 'lucide-react';
+import { AlertCircle, Plus, Trash2, Copy, CheckCircle2, Save, Settings, Users } from 'lucide-react';
+import { AVAILABLE_MODELS } from '@/lib/constants';
+import { useSettings } from '@/hooks/useSettings';
 
 interface InviteFormValues {
   email: string;
   expires: string;
 }
-
-const AVAILABLE_MODELS = [
-  { value: 'gpt-5-mini', label: 'GPT-5 Mini ($0.25/$2.00)', description: 'Cheapest option' },
-  { value: 'gpt-5', label: 'GPT-5 ($1.25/$10.00)', description: 'Balanced performance' },
-  { value: 'gpt-5.1', label: 'GPT-5.1 ($1.25/$10.00)', description: 'Latest GPT-5 variant' },
-  { value: 'gpt-5.2', label: 'GPT-5.2 ($1.75/$14.00)', description: 'Higher performance' },
-  { value: 'gpt-4.1', label: 'GPT-4.1 ($2.00/$8.00)', description: 'Good balance' },
-  { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini ($0.40/$1.60)', description: 'Budget GPT-4' },
-  { value: 'gpt-4o', label: 'GPT-4o ($2.50/$10.00)', description: 'Original GPT-4o' },
-];
 
 export function AdminPanelPage() {
   const { user } = useAuth();
@@ -70,12 +62,16 @@ export function AdminPanelPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [inviteIdToDelete, setInviteIdToDelete] = useState<string | null>(null);
   
-  // Settings state
-  const [settingsLoading, setSettingsLoading] = useState(true);
-  const [settingsSaving, setSettingsSaving] = useState(false);
-  const [settingsError, setSettingsError] = useState('');
-  const [settingsSuccess, setSettingsSuccess] = useState(false);
-  const [openaiModel, setOpenaiModel] = useState('gpt-5-mini');
+  // Settings
+  const {
+    loading: settingsLoading,
+    saving: settingsSaving,
+    error: settingsError,
+    success: settingsSuccess,
+    openaiModel,
+    setOpenaiModel,
+    saveSettings: handleSaveSettings,
+  } = useSettings();
   
   const inviteForm = useForm<InviteFormValues>({
     defaultValues: {
@@ -90,7 +86,6 @@ export function AdminPanelPage() {
       return;
     }
     loadInvitesData();
-    loadSettings();
   }, [user, navigate]);
 
   // Invites functions
@@ -163,73 +158,23 @@ export function AdminPanelPage() {
     setTimeout(() => setCopiedLink(null), 2000);
   };
 
-  // Settings functions
-  const loadSettings = async () => {
-    try {
-      setSettingsLoading(true);
-      setSettingsError('');
-      const setting = await getSetting('openai_model');
-      setOpenaiModel(setting.value || 'gpt-5-mini');
-    } catch (err) {
-      // If setting doesn't exist, use default (don't show error)
-      if (err instanceof Error && (err.message.includes('404') || err.message.includes('Setting not found'))) {
-        setOpenaiModel('gpt-5-mini');
-        setSettingsError(''); // Clear any error
-      } else {
-        setSettingsError(getErrorMessage(err, 'Failed to load settings'));
-      }
-    } finally {
-      setSettingsLoading(false);
-    }
-  };
-
-  const handleSaveSettings = async () => {
-    try {
-      setSettingsSaving(true);
-      setSettingsError('');
-      setSettingsSuccess(false);
-      
-      await updateSetting('openai_model', openaiModel, 'OpenAI model used for recipe analysis');
-      
-      setSettingsSuccess(true);
-      setTimeout(() => setSettingsSuccess(false), 3000);
-    } catch (err) {
-      setSettingsError(getErrorMessage(err, 'Failed to save settings'));
-    } finally {
-      setSettingsSaving(false);
-    }
-  };
 
   if (invitesLoading && settingsLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Spinner className="h-8 w-8 text-orange-500" />
-          <Skeleton className="h-4 w-32" />
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-br from-orange-500 to-amber-600 p-2.5 rounded-xl shadow-lg">
-              <ChefHat className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
-                Admin Panel
-              </h1>
-              <p className="text-sm text-muted-foreground">Manage invites and settings</p>
-            </div>
-          </div>
-          <Button onClick={() => navigate('/')} variant="outline">
-            Back to Recipes
-          </Button>
-        </div>
+        <PageHeader
+          title="Admin Panel"
+          description="Manage invites and settings"
+          actions={
+            <Button onClick={() => navigate('/')} variant="outline">
+              Back to Recipes
+            </Button>
+          }
+        />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full max-w-md grid-cols-2">

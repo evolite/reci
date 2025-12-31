@@ -4,9 +4,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { ChefHat, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { AuthCardHeader } from '@/components/AuthCardHeader';
 import { useState } from 'react';
 
 interface LoginFormValues {
@@ -44,13 +45,7 @@ export function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="bg-gradient-to-br from-orange-500 to-amber-600 p-3 rounded-xl shadow-lg">
-              <ChefHat className="w-8 h-8 text-white" />
-            </div>
-          </div>
-          <CardTitle className="text-2xl">Welcome Back</CardTitle>
-          <CardDescription>Login to your Reci account</CardDescription>
+          <AuthCardHeader title="Welcome Back" description="Login to your Reci account" />
         </CardHeader>
         <CardContent>
           <Form {...form}>
