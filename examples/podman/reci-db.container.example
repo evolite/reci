@@ -1,0 +1,22 @@
+[Unit]
+Description=Recipe Manager PostgreSQL Database
+
+[Container]
+Image=docker.io/library/postgres:16-alpine
+ContainerName=reci-db
+Network=services-network
+Environment=POSTGRES_USER=reci
+Environment=POSTGRES_PASSWORD=reci_password
+Environment=POSTGRES_DB=reci_db
+Volume=reci-db-data:/var/lib/postgresql/data
+DNS=8.8.8.8
+DNS=1.1.1.1
+AddHost=host.docker.internal:host-gateway
+AutoUpdate=registry
+
+[Service]
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

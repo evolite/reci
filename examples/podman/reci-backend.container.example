@@ -1,0 +1,24 @@
+[Unit]
+Description=Recipe Manager Backend API
+After=reci-db.service
+Requires=reci-db.service
+
+[Container]
+Image=localhost/reci-backend:latest
+ContainerName=reci-backend
+Network=services-network
+Environment=DATABASE_URL=postgresql://reci:reci_password@reci-db:5432/reci_db
+Environment=PORT=4000
+EnvironmentFile=/path/to/your/backend/.env
+WorkingDir=/app
+PublishPort=4000:4000
+DNS=8.8.8.8
+DNS=1.1.1.1
+AddHost=host.docker.internal:host-gateway
+
+[Service]
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
