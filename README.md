@@ -1,14 +1,14 @@
 # Reci
 
-**A personal recipe video library for my family and me.**
+**A personal recipe video library built for my family and me.**
 
-I built this because I kept finding amazing recipes on YouTube, TikTok, and Instagram, saving them to playlists or screenshots, and then completely forgetting about them. My family and I would stumble upon great recipes on social media, but we never actually used them because they were buried in playlists or lost in photo albums.
+I built this because I kept finding amazing recipes on YouTube, TikTok, and Instagram, saving them to playlists or screenshots, and then completely forgetting about them. My family and I would stumble upon great recipes on social media, but we never actually used them because they were buried in playlists or lost in photo albums. I don't think that is a problem unique to me...
 
-Reci solves that problem by turning recipe videos into a searchable, organized collection that we actually use.
+Reci attempts to solve that problem by turning recipe videos into a searchable, organized collection that we actually use.
 
 ## Why I Built This
 
-Most recipe managers expect you to manually type in ingredients, categorize everything, and maintain your own database. That's too much work. I wanted something that:
+Most recipe managers expect you to manually type in ingredients, categorize everything, and maintain your own database. That's too much work. I wanted something that my family actually wanted to engage with, KISS:
 
 - **Works with video content**: Built specifically for recipe videos from YouTube, TikTok, Instagram, etc. Just paste a URL and it handles the rest.
 - **Actually extracts recipes**: Uses AI to watch the video, read the comments, and extract everything—ingredients, instructions, tags, even cooking tips from the community. No manual data entry.
@@ -22,11 +22,9 @@ Most recipe managers expect you to manually type in ingredients, categorize ever
 
 **vs. Paprika/AnyList/RecipeBox**: Those are great for typed recipes, but they don't understand video content. Reci extracts recipes directly from video descriptions and comments.
 
-**vs. YouTube Playlists**: Playlists are just links. Reci extracts the actual recipe data, making it searchable and usable even if the video gets deleted.
+**vs. YouTube Playlists**: Playlists are just links. Reci extracts the actual recipe data, making it searchable and usable even if the video gets deleted. Also can just contain youtube links.
 
 **vs. Pinterest**: Pinterest is visual discovery, but terrible for actually cooking. Reci gives you structured ingredients and instructions, not just pretty pictures.
-
-**vs. ChatGPT/Claude**: AI assistants can help, but they don't remember your saved recipes or generate shopping lists from multiple dishes.
 
 ## Tech Stack
 
@@ -101,4 +99,4 @@ MIT - Do whatever you want with it.
 
 **Built for my family and me, for people who love cooking but hate organizing recipes.**
 
-*This project was vibe coded. I make no guarantees about code quality, security, or reliability. That said i have used SonarQube to validate quality, Use at your own risk anyway.*
+*This project was vibe coded. I make no guarantees about code quality, security, or reliability. That said i have used SonarQube in an attempt to validate quality, Use at your own risk anyway.*
