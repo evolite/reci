@@ -126,7 +126,7 @@ function extractMetadataFromContent(html: string, $: ReturnType<typeof cheerio.l
       }
     } catch (e) {
       // Ignore JSON parse errors - invalid JSON is not critical
-      console.debug('Failed to parse JSON data:', e instanceof Error ? e.message : 'Unknown error');
+      console.debug('Failed to parse JSON data:', getErrorMessage(e));
     }
   });
 
@@ -348,7 +348,7 @@ function extractFromJsonLdRecipe(
         processJsonLdRecipeItem(item, result);
       }
     } catch (e) {
-      console.debug('Failed to parse JSON-LD data:', e instanceof Error ? e.message : 'Unknown error');
+      console.debug('Failed to parse JSON-LD data:', getErrorMessage(e));
     }
   });
   
@@ -399,7 +399,7 @@ function extractFromJsonLdTikTokInstagram(
       const data = JSON.parse(jsonContent);
       processJsonLdTikTokInstagramItem(data, result);
     } catch (e) {
-      console.debug('Failed to parse JSON-LD data:', e instanceof Error ? e.message : 'Unknown error');
+      console.debug('Failed to parse JSON-LD data:', getErrorMessage(e));
     }
   });
   

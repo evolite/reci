@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { getInvites, createInvite, deleteInvite, getInviteStats, type Invite, type InviteStats } from '@/lib/api';
 import { getSetting, updateSetting } from '@/lib/api';
+import { getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -175,7 +176,7 @@ export function AdminPanelPage() {
         setOpenaiModel('gpt-5-mini');
         setSettingsError(''); // Clear any error
       } else {
-        setSettingsError(err instanceof Error ? err.message : 'Failed to load settings');
+        setSettingsError(getErrorMessage(err, 'Failed to load settings'));
       }
     } finally {
       setSettingsLoading(false);
@@ -193,7 +194,7 @@ export function AdminPanelPage() {
       setSettingsSuccess(true);
       setTimeout(() => setSettingsSuccess(false), 3000);
     } catch (err) {
-      setSettingsError(err instanceof Error ? err.message : 'Failed to save settings');
+      setSettingsError(getErrorMessage(err, 'Failed to save settings'));
     } finally {
       setSettingsSaving(false);
     }

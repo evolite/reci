@@ -37,21 +37,8 @@ export function ShoppingCartDialog({ open, onOpenChange, recipeIds, onClose, onS
   const [copied, setCopied] = useState(false);
   const { updateCheckedItems, shareCart, unshareCart } = useShoppingCart();
 
-  // Helper function to load saved cart from currentShoppingCart
-  const loadSavedCartFromCurrent = useCallback((cart: typeof currentShoppingCart) => {
-    if (!cart) return;
-    setShoppingList(cart.shoppingList);
-    setIsLoading(false);
-    setError(null);
-    setHasGenerated(false);
-    setCheckedItems(new Set(cart.checkedItems || []));
-    setShareUrl(cart.shareToken 
-      ? `${globalThis.location.origin}/cart/shared/${cart.shareToken}`
-      : null);
-  }, []);
-
-  // Helper function to load saved cart from hook
-  const loadSavedCartFromHook = useCallback((cart: typeof savedCartFromHook) => {
+  // Helper function to load saved cart (works for both currentShoppingCart and savedCartFromHook)
+  const loadSavedCart = useCallback((cart: typeof currentShoppingCart | typeof savedCartFromHook) => {
     if (!cart) return;
     setShoppingList(cart.shoppingList);
     setIsLoading(false);
@@ -104,13 +91,13 @@ export function ShoppingCartDialog({ open, onOpenChange, recipeIds, onClose, onS
     }
 
     if (isSaved && currentShoppingCart) {
-      loadSavedCartFromCurrent(currentShoppingCart);
+      loadSavedCart(currentShoppingCart);
     } else if (savedCartFromHook && isSaved) {
-      loadSavedCartFromHook(savedCartFromHook);
+      loadSavedCart(savedCartFromHook);
     } else if (recipeIds.length > 0 && !hasGenerated) {
       generateNewShoppingList(recipeIds);
     }
-  }, [open, recipeIds, isSaved, currentShoppingCart, savedCartFromHook, onSave, hasGenerated, resetDialogState, loadSavedCartFromCurrent, loadSavedCartFromHook, generateNewShoppingList]);
+  }, [open, recipeIds, isSaved, currentShoppingCart, savedCartFromHook, onSave, hasGenerated, resetDialogState, loadSavedCart, generateNewShoppingList]);
 
   const handleItemCheck = (sectionIndex: number, ingredientIndex: number, checked: boolean) => {
     const key = `${sectionIndex}-${ingredientIndex}`;

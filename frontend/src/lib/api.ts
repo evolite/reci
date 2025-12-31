@@ -28,17 +28,23 @@ function getAuthHeaders(token?: string | null): HeadersInit {
   return headers;
 }
 
+// Helper function to extract error from response
+async function extractErrorFromResponse(response: Response, defaultError: string): Promise<string> {
+  const error = await response.json().catch(() => ({ error: defaultError }));
+  return error.error || defaultError;
+}
+
 // Helper function to handle API responses and check for 401
 async function handleApiResponse<T>(response: Response): Promise<T> {
   if (response.status === 401) {
     handle401Response();
-    const error = await response.json().catch(() => ({ error: 'Unauthorized' }));
-    throw new Error(error.error || 'Session expired. Please login again.');
+    const errorMessage = await extractErrorFromResponse(response, 'Unauthorized');
+    throw new Error(errorMessage || 'Session expired. Please login again.');
   }
   
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(error.error || 'Request failed');
+    const errorMessage = await extractErrorFromResponse(response, 'Request failed');
+    throw new Error(errorMessage);
   }
   
   return response.json();
@@ -55,8 +61,8 @@ async function postWithoutAuth<T>(url: string, body: unknown, errorMessage: stri
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: errorMessage }));
-    throw new Error(error.error || errorMessage);
+    const errorMsg = await extractErrorFromResponse(response, errorMessage);
+    throw new Error(errorMsg);
   }
 
   return response.json();
@@ -73,8 +79,8 @@ async function putWithoutAuth<T>(url: string, body: unknown, errorMessage: strin
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: errorMessage }));
-    throw new Error(error.error || errorMessage);
+    const errorMsg = await extractErrorFromResponse(response, errorMessage);
+    throw new Error(errorMsg);
   }
 
   return response.json();
@@ -85,8 +91,8 @@ async function getWithoutAuth<T>(url: string, errorMessage: string): Promise<T> 
   const response = await fetch(`${API_BASE_URL}${url}`);
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: errorMessage }));
-    throw new Error(error.error || errorMessage);
+    const errorMsg = await extractErrorFromResponse(response, errorMessage);
+    throw new Error(errorMsg);
   }
 
   return response.json();
@@ -105,8 +111,8 @@ async function deleteWithAuth(url: string, errorMessage: string): Promise<void> 
   }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: errorMessage }));
-    throw new Error(error.error || errorMessage);
+    const errorMsg = await extractErrorFromResponse(response, errorMessage);
+    throw new Error(errorMsg);
   }
 }
 
