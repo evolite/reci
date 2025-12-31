@@ -1,36 +1,34 @@
 import type { ShoppingListResponse } from './Recipe';
 
-export interface ShoppingCart {
-  id: string;
-  userId: string;
+// Base interface for common shopping cart fields
+interface BaseShoppingCartFields {
   recipeIds: string[];
   shoppingList: ShoppingListResponse;
   checkedItems: string[];
+}
+
+// Base interface for cart with metadata
+interface BaseShoppingCartMetadata {
+  id: string;
+  userId: string;
   shareToken: string | null;
+}
+
+export interface ShoppingCart extends BaseShoppingCartFields, BaseShoppingCartMetadata {
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface ShoppingCartRequest {
-  recipeIds: string[];
-  shoppingList: ShoppingListResponse;
+export interface ShoppingCartRequest extends Pick<BaseShoppingCartFields, 'recipeIds' | 'shoppingList'> {
   checkedItems?: string[];
 }
 
-export interface ShoppingCartResponse {
-  id: string;
-  userId: string;
-  recipeIds: string[];
-  shoppingList: ShoppingListResponse;
-  checkedItems: string[];
-  shareToken: string | null;
+export interface ShoppingCartResponse extends BaseShoppingCartFields, BaseShoppingCartMetadata {
   createdAt: string;
   updatedAt: string;
 }
 
-export interface SharedCartResponse {
-  shoppingList: ShoppingListResponse;
-  checkedItems: string[];
+export interface SharedCartResponse extends Pick<BaseShoppingCartFields, 'shoppingList' | 'checkedItems'> {
   ownerName?: string | null;
   shareToken: string;
 }
