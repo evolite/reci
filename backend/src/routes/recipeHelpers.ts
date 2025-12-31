@@ -25,7 +25,6 @@ export function cleanInstructions(instructions: string): string {
   
   // Remove bullet points or numbered lists that look like ingredients (contain measurements)
   // Use more specific patterns with bounded quantifiers to prevent backtracking
-  const measurementUnits = String.raw`(?:oz|cup|cups|tbsp|tsp|lb|pound|ounce|fl\s*oz|g|kg|ml|dl|l)`;
   // Split into lines and process individually to avoid regex DoS
   const lines = cleaned.split('\n');
   const filteredLines = lines.filter(line => {
@@ -33,11 +32,13 @@ export function cleanInstructions(instructions: string): string {
     if (line.length > 500) return true; // Keep long lines (likely not ingredient lines)
     
     // More specific pattern: bullet + whitespace + digits/slashes (bounded) + unit + text (bounded)
-    const bulletMatch = /^[\s]*[•\-*]\s+[\d/\s]{0,20}(?:oz|cup|cups|tbsp|tsp|lb|pound|ounce|fl\s*oz|g|kg|ml|dl|l)[\w\s,()]{0,200}$/i.test(line);
+    // Simplified regex to reduce complexity: use \d instead of [\d/\s] and remove duplicate character classes
+    const bulletMatch = /^\s*[•\-*]\s+\d{0,20}(?:\/\d{0,20})?\s{0,20}(?:oz|cup|cups|tbsp|tsp|lb|pound|ounce|fl\s*oz|g|kg|ml|dl|l)[\w\s,()]{0,200}$/i.test(line);
     if (bulletMatch) return false;
     
     // More specific pattern: start + digits/letters (bounded) + dot + whitespace + digits/slashes (bounded) + unit + text (bounded)
-    const numberedMatch = /^[\s]*[\d\w]{0,10}\.?\s+[\d/\s]{0,20}(?:oz|cup|cups|tbsp|tsp|lb|pound|ounce|fl\s*oz|g|kg|ml|dl|l)[\w\s,()]{0,200}$/i.test(line);
+    // Simplified regex to reduce complexity: use \d instead of [\d\w] and [\d/\s], remove duplicate character classes
+    const numberedMatch = /^\s*\d{0,10}\.?\s+\d{0,20}(?:\/\d{0,20})?\s{0,20}(?:oz|cup|cups|tbsp|tsp|lb|pound|ounce|fl\s*oz|g|kg|ml|dl|l)[\w\s,()]{0,200}$/i.test(line);
     if (numberedMatch) return false;
     
     return true;

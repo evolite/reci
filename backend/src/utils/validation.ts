@@ -70,9 +70,9 @@ export function sanitizeInput(input: string, maxLength: number = 10000): string 
 
   // Remove null bytes and control characters (except newlines and tabs for recipe text)
   // Exclude \u0009 (tab) and \u000A (newline) from removal
-  // Use literal regex pattern for better performance and to avoid regex DoS
+  // Use Unicode escapes to avoid control character detection in source
   // Pattern matches: \u0000-\u0008, \u000B-\u000C, \u000E-\u001F, \u007F
-  const controlCharPattern = /[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g;
+  const controlCharPattern = /[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F]/g;
   sanitized = sanitized.replaceAll(controlCharPattern, '');
 
   return sanitized;
