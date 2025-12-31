@@ -1,12 +1,7 @@
 # Reci
 
-[![GitHub Actions](https://img.shields.io/github/actions/workflow/status/evolite/reci/build-backend.yml?label=Backend%20Build)](https://github.com/evolite/reci/actions/workflows/build-backend.yml)
-[![GitHub Actions](https://img.shields.io/github/actions/workflow/status/evolite/reci/build-frontend.yml?label=Frontend%20Build)](https://github.com/evolite/reci/actions/workflows/build-frontend.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub release](https://img.shields.io/github/v/release/evolite/reci)](https://github.com/evolite/reci/releases)
-[![GitHub last commit](https://img.shields.io/github/last-commit/evolite/reci)](https://github.com/evolite/reci/commits)
-[![GitHub stars](https://img.shields.io/github/stars/evolite/reci)](https://github.com/evolite/reci/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/evolite/reci)](https://github.com/evolite/reci/network/members)
 [![GitHub issues](https://img.shields.io/github/issues/evolite/reci)](https://github.com/evolite/reci/issues)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg?logo=react)](https://react.dev/)
@@ -22,8 +17,6 @@
 [![OpenAI](https://img.shields.io/badge/OpenAI-6.15-412991?logo=openai)](https://openai.com/)
 [![shadcn/ui](https://img.shields.io/badge/shadcn%2Fui-000000?logo=shadcnui)](https://ui.shadcn.com/)
 [![SonarQube](https://img.shields.io/badge/SonarQube-Enabled-4E9BCD?logo=sonarqube)](https://www.sonarqube.org/)
-[![Docker Image](https://img.shields.io/badge/docker-ghcr.io%2Fevolite%2Freci--backend-blue)](https://github.com/evolite/reci/pkgs/container/reci-backend)
-[![Docker Image](https://img.shields.io/badge/docker-ghcr.io%2Fevolite%2Freci--frontend-blue)](https://github.com/evolite/reci/pkgs/container/reci-frontend)
 
 **A personal recipe video library built for my family and me.**
 
