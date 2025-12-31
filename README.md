@@ -13,6 +13,7 @@ Most recipe managers expect you to manually type in ingredients, categorize ever
 - **Works with video content**: Built specifically for recipe videos from YouTube, TikTok, Instagram, etc. Just paste a URL and it handles the rest.
 - **Actually extracts recipes**: Uses AI to watch the video, read the comments, and extract everything—ingredients, instructions, tags, even cooking tips from the community. No manual data entry.
 - **Easy to add**: The whole point is making it effortless to save recipes we find. Paste a URL, done.
+- **Everyoen Shares Recipies**: A recipy added is visible and editable by all users, perfect for family and friends.
 - **Easy to search**: Find recipes by ingredient ("what can I make with chicken and tomatoes?"), cuisine type, tags, or just browse. The recipes are actually discoverable.
 - **Smart shopping lists**: Select multiple recipes and get a consolidated shopping list with ingredients grouped by category. Share it with family members.
 - **Metric by default**: Automatically converts everything to metric units. No more "how many grams is 2 cups of flour?" moments.
