@@ -156,90 +156,95 @@ function extractMetadataFromContent(html: string, $: ReturnType<typeof cheerio.l
 }
 
 /**
+ * Helper function to extract JSON string using brace counting
+ */
+function extractJsonByBraceCounting(html: string, startMarker: string): string | null {
+  const startIndex = html.indexOf(startMarker);
+  if (startIndex === -1) return null;
+  
+  let braceCount = 0;
+  let foundStart = false;
+  let jsonStart = -1;
+  let jsonEnd = -1;
+  
+  for (let i = startIndex + startMarker.length - 1; i < Math.min(html.length, startIndex + 1000000); i++) {
+    if (html[i] === '{') {
+      if (!foundStart) {
+        foundStart = true;
+        jsonStart = i;
+      }
+      braceCount++;
+    } else if (html[i] === '}') {
+      braceCount--;
+      if (braceCount === 0 && foundStart) {
+        jsonEnd = i + 1;
+        break;
+      }
+    }
+  }
+  
+  if (jsonStart !== -1 && jsonEnd !== -1) {
+    return html.substring(jsonStart, jsonEnd);
+  }
+  
+  return null;
+}
+
+/**
+ * Helper function to extract and process YouTube comments from JSON data
+ */
+function processYouTubeComments(ytInitialData: any): string[] {
+  const comments = findCommentsInObject(ytInitialData);
+  return comments
+    .filter((c, i, arr) => arr.indexOf(c) === i) // Remove duplicates
+    .sort((a, b) => b.length - a.length)
+    .slice(0, 5);
+}
+
+/**
+ * Helper function to extract YouTube comments from HTML
+ */
+function extractYouTubeComments(html: string): string[] {
+  // Try brace counting first
+  const startMarker = 'var ytInitialData = ({';
+  let jsonStr = extractJsonByBraceCounting(html, startMarker);
+  
+  // Fallback to regex if brace counting fails
+  if (!jsonStr) {
+    const ytInitialDataRegex = /var ytInitialData = (\{[^;]{0,1000000}\});/s;
+    const ytInitialDataMatch = ytInitialDataRegex.exec(html);
+    if (ytInitialDataMatch) {
+      jsonStr = ytInitialDataMatch[1];
+    }
+  }
+  
+  if (!jsonStr) return [];
+  
+  try {
+    const ytInitialData = JSON.parse(jsonStr);
+    return processYouTubeComments(ytInitialData);
+  } catch (parseError) {
+    console.warn('Failed to parse ytInitialData:', parseError);
+    return [];
+  }
+}
+
+/**
  * Attempts to extract comments or additional text content (platform-specific)
  * This is a basic implementation - can be extended for specific platforms
  */
 function extractCommentsFromHtml(html: string, platform: string | null): string[] {
-  const topComments: string[] = [];
-  
-  // For now, we'll keep YouTube-specific comment extraction
-  // Other platforms can be added incrementally
   if (platform === 'youtube') {
     try {
-      // Use brace counting instead of regex to avoid catastrophic backtracking
-      const startMarker = 'var ytInitialData = ({';
-      const startIndex = html.indexOf(startMarker);
-      if (startIndex !== -1) {
-        // Find the matching closing brace by counting braces
-        let braceCount = 0;
-        let foundStart = false;
-        let jsonStart = -1;
-        let jsonEnd = -1;
-        
-        for (let i = startIndex + startMarker.length - 1; i < Math.min(html.length, startIndex + 1000000); i++) {
-          if (html[i] === '{') {
-            if (!foundStart) {
-              foundStart = true;
-              jsonStart = i;
-            }
-            braceCount++;
-          } else if (html[i] === '}') {
-            braceCount--;
-            if (braceCount === 0 && foundStart) {
-              jsonEnd = i + 1;
-              break;
-            }
-          }
-        }
-        
-        if (jsonStart !== -1 && jsonEnd !== -1) {
-          const jsonStr = html.substring(jsonStart, jsonEnd);
-          try {
-            const ytInitialData = JSON.parse(jsonStr);
-            const comments = findCommentsInObject(ytInitialData);
-            
-            // Sort by length (longer comments are more likely to contain recipes) and take top 5
-            const sortedComments = comments
-              .filter((c, i, arr) => arr.indexOf(c) === i) // Remove duplicates
-              .sort((a, b) => b.length - a.length)
-              .slice(0, 5);
-            
-            topComments.push(...sortedComments);
-          } catch (parseError) {
-            console.warn('Failed to parse ytInitialData:', parseError);
-          }
-        }
-      }
-      
-      // Fallback to bounded regex if brace counting fails
-      if (topComments.length === 0) {
-        const ytInitialDataRegex = /var ytInitialData = (\{[^;]{0,1000000}\});/s;
-        const ytInitialDataMatch = ytInitialDataRegex.exec(html);
-        if (ytInitialDataMatch) {
-          try {
-            const ytInitialData = JSON.parse(ytInitialDataMatch[1]);
-            const comments = findCommentsInObject(ytInitialData);
-            
-            // Sort by length (longer comments are more likely to contain recipes) and take top 5
-            const sortedComments = comments
-              .filter((c, i, arr) => arr.indexOf(c) === i) // Remove duplicates
-              .sort((a, b) => b.length - a.length)
-              .slice(0, 5);
-            
-            topComments.push(...sortedComments);
-          } catch (parseError) {
-            console.warn('Failed to parse ytInitialData:', parseError);
-          }
-        }
-      }
+      return extractYouTubeComments(html);
     } catch (commentError) {
       console.warn('Failed to extract comments:', commentError);
+      return [];
     }
   }
   
   // Future: Add Instagram, TikTok, etc. comment extraction here
-  
-  return topComments;
+  return [];
 }
 
 /**
@@ -259,15 +264,13 @@ function isRecipeComment(text: string): boolean {
  */
 function extractCommentFromObject(obj: any): string[] {
   const comments: string[] = [];
+  const textFields = ['text', 'content', 'simpleText'];
   
-  if (obj.text && typeof obj.text === 'string' && isRecipeComment(obj.text)) {
-    comments.push(obj.text);
-  }
-  if (obj.content && typeof obj.content === 'string' && isRecipeComment(obj.content)) {
-    comments.push(obj.content);
-  }
-  if (obj.simpleText && typeof obj.simpleText === 'string' && isRecipeComment(obj.simpleText)) {
-    comments.push(obj.simpleText);
+  for (const field of textFields) {
+    const value = obj[field];
+    if (typeof value === 'string' && isRecipeComment(value)) {
+      comments.push(value);
+    }
   }
   
   return comments;
@@ -277,22 +280,14 @@ function extractCommentFromObject(obj: any): string[] {
  * Helper function to find comments in arrays
  */
 function findCommentsInArray(arr: any[], depth: number): string[] {
-  const comments: string[] = [];
-  for (const item of arr) {
-    comments.push(...findCommentsInObject(item, depth + 1));
-  }
-  return comments;
+  return arr.flatMap(item => findCommentsInObject(item, depth + 1));
 }
 
 /**
  * Helper function to find comments in objects
  */
 function findCommentsInObjectValue(obj: any, depth: number): string[] {
-  const comments: string[] = [];
-  for (const value of Object.values(obj)) {
-    comments.push(...findCommentsInObject(value, depth));
-  }
-  return comments;
+  return Object.values(obj).flatMap(value => findCommentsInObject(value, depth));
 }
 
 /**
@@ -300,21 +295,23 @@ function findCommentsInObjectValue(obj: any, depth: number): string[] {
  */
 function findCommentsInObject(obj: any, depth = 0): string[] {
   if (depth > 10) return []; // Prevent infinite recursion
-  const comments: string[] = [];
   
   if (typeof obj === 'string' && isRecipeComment(obj)) {
-    comments.push(obj);
-  } else if (Array.isArray(obj)) {
-    const arrayComments = findCommentsInArray(obj, depth);
-    comments.push(...arrayComments);
-  } else if (obj && typeof obj === 'object') {
-    comments.push(
-      ...extractCommentFromObject(obj),
-      ...findCommentsInObjectValue(obj, depth + 1)
-    );
+    return [obj];
   }
   
-  return comments;
+  if (Array.isArray(obj)) {
+    return findCommentsInArray(obj, depth);
+  }
+  
+  if (obj && typeof obj === 'object') {
+    return [
+      ...extractCommentFromObject(obj),
+      ...findCommentsInObjectValue(obj, depth + 1)
+    ];
+  }
+  
+  return [];
 }
 
 /**
@@ -425,6 +422,41 @@ function extractImageUrl(image: unknown): string | null {
   return null;
 }
 
+/**
+ * Helper function to process a single JSON-LD item for recipe extraction
+ */
+function processJsonLdRecipeItem(item: any, result: { title: string; description: string; thumbnailUrl: string }): void {
+  const itemType = item['@type'];
+  const isRecipe = itemType === 'Recipe' || (Array.isArray(itemType) && itemType.includes('Recipe'));
+  const isArticleOrWebPage = itemType === 'Article' || itemType === 'WebPage';
+  
+  if (isRecipe) {
+    if (item.name && (!result.title || result.title === 'Untitled')) {
+      result.title = item.name;
+    }
+    if (item.description && !result.description) {
+      result.description = item.description;
+    }
+    const imageUrl = extractImageUrl(item.image);
+    if (imageUrl && !result.thumbnailUrl) {
+      result.thumbnailUrl = imageUrl;
+    }
+  }
+  
+  if (isArticleOrWebPage) {
+    if (item.headline && (!result.title || result.title === 'Untitled')) {
+      result.title = item.headline;
+    }
+    if (item.description && !result.description) {
+      result.description = item.description;
+    }
+    const imageUrl = extractImageUrl(item.image);
+    if (imageUrl && !result.thumbnailUrl) {
+      result.thumbnailUrl = imageUrl;
+    }
+  }
+}
+
 function extractFromJsonLdRecipe(
   $: ReturnType<typeof cheerio.load>,
   title: string,
@@ -443,35 +475,7 @@ function extractFromJsonLdRecipe(
       const items = Array.isArray(data) ? data : [data];
       
       for (const item of items) {
-        const itemType = item['@type'];
-        const isRecipe = itemType === 'Recipe' || (Array.isArray(itemType) && itemType.includes('Recipe'));
-        const isArticleOrWebPage = itemType === 'Article' || itemType === 'WebPage';
-        
-        if (isRecipe) {
-          if (item.name && (!result.title || result.title === 'Untitled')) {
-            result.title = item.name;
-          }
-          if (item.description && !result.description) {
-            result.description = item.description;
-          }
-          const imageUrl = extractImageUrl(item.image);
-          if (imageUrl && !result.thumbnailUrl) {
-            result.thumbnailUrl = imageUrl;
-          }
-        }
-        
-        if (isArticleOrWebPage) {
-          if (item.headline && (!result.title || result.title === 'Untitled')) {
-            result.title = item.headline;
-          }
-          if (item.description && !result.description) {
-            result.description = item.description;
-          }
-          const imageUrl = extractImageUrl(item.image);
-          if (imageUrl && !result.thumbnailUrl) {
-            result.thumbnailUrl = imageUrl;
-          }
-        }
+        processJsonLdRecipeItem(item, result);
       }
     } catch (e) {
       console.debug('Failed to parse JSON-LD data:', e instanceof Error ? e.message : 'Unknown error');
@@ -479,6 +483,33 @@ function extractFromJsonLdRecipe(
   });
   
   return result;
+}
+
+/**
+ * Helper function to process a single JSON-LD item for TikTok/Instagram extraction
+ */
+function processJsonLdTikTokInstagramItem(data: any, result: { title: string; description: string; thumbnailUrl: string }): void {
+  const itemType = data['@type'];
+  const isVideoObject = itemType === 'VideoObject' || itemType === 'Video';
+  
+  if (isVideoObject) {
+    if (data.name && (!result.title || result.title === 'Untitled')) {
+      result.title = data.name;
+    }
+    if (data.description && !result.description) {
+      result.description = data.description;
+    }
+    if (data.thumbnailUrl && !result.thumbnailUrl) {
+      result.thumbnailUrl = data.thumbnailUrl;
+    }
+  }
+  
+  if (data.headline && (!result.title || result.title === 'Untitled')) {
+    result.title = data.headline;
+  }
+  if (data.description && !result.description) {
+    result.description = data.description;
+  }
 }
 
 function extractFromJsonLdTikTokInstagram(
@@ -496,30 +527,76 @@ function extractFromJsonLdTikTokInstagram(
       if (!jsonContent) return;
       
       const data = JSON.parse(jsonContent);
-      const itemType = data['@type'];
-      
-      if (itemType === 'VideoObject' || itemType === 'Video') {
-        if (data.name && (!result.title || result.title === 'Untitled')) {
-          result.title = data.name;
-        }
-        if (data.description && !result.description) {
-          result.description = data.description;
-        }
-        if (data.thumbnailUrl && !result.thumbnailUrl) {
-          result.thumbnailUrl = data.thumbnailUrl;
-        }
-      }
-      
-      if (data.headline && (!result.title || result.title === 'Untitled')) {
-        result.title = data.headline;
-      }
-      if (data.description && !result.description) {
-        result.description = data.description;
-      }
+      processJsonLdTikTokInstagramItem(data, result);
     } catch (e) {
       console.debug('Failed to parse JSON-LD data:', e instanceof Error ? e.message : 'Unknown error');
     }
   });
+  
+  return result;
+}
+
+/**
+ * Helper function to extract Instagram shared data JSON string
+ */
+function extractInstagramSharedDataJson(html: string): string | null {
+  const startMarker = 'window._sharedData';
+  const startIndex = html.indexOf(startMarker);
+  if (startIndex === -1) return null;
+  
+  const assignIndex = html.indexOf('=', startIndex);
+  if (assignIndex === -1) return null;
+  
+  // Find the opening brace
+  let braceStart = -1;
+  for (let i = assignIndex; i < Math.min(html.length, assignIndex + 1000); i++) {
+    if (html[i] === '{') {
+      braceStart = i;
+      break;
+    }
+  }
+  
+  if (braceStart === -1) return null;
+  
+  // Count braces to find the matching closing brace
+  let braceCount = 0;
+  let jsonEnd = -1;
+  
+  for (let i = braceStart; i < Math.min(html.length, braceStart + 1000000); i++) {
+    if (html[i] === '{') {
+      braceCount++;
+    } else if (html[i] === '}') {
+      braceCount--;
+      if (braceCount === 0) {
+        jsonEnd = i + 1;
+        break;
+      }
+    }
+  }
+  
+  if (jsonEnd !== -1) {
+    return html.substring(braceStart, jsonEnd);
+  }
+  
+  return null;
+}
+
+/**
+ * Helper function to extract metadata from parsed Instagram shared data
+ */
+function extractFromParsedInstagramData(sharedData: any, result: { description: string; thumbnailUrl: string }): { description: string; thumbnailUrl: string } {
+  const entryData = sharedData?.entry_data;
+  if (!entryData) return result;
+  
+  const postPage = entryData.PostPage?.[0]?.graphql?.shortcode_media;
+  if (!postPage) return result;
+  
+  if (postPage.edge_media_to_caption?.edges?.[0]?.node?.text && !result.description) {
+    result.description = postPage.edge_media_to_caption.edges[0].node.text;
+  }
+  if (postPage.display_url && !result.thumbnailUrl) {
+    result.thumbnailUrl = postPage.display_url;
+  }
   
   return result;
 }
@@ -530,49 +607,11 @@ function extractFromInstagramSharedData(
   thumbnailUrl: string
 ): { description: string; thumbnailUrl: string } {
   let result = { description, thumbnailUrl };
-  // Use brace counting instead of regex to avoid catastrophic backtracking
-  const startMarker = 'window._sharedData';
-  const startIndex = html.indexOf(startMarker);
-  let jsonStr: string | null = null;
   
-  if (startIndex !== -1) {
-    // Find the assignment and then count braces
-    const assignIndex = html.indexOf('=', startIndex);
-    if (assignIndex !== -1) {
-      // Find the opening brace
-      let braceStart = -1;
-      for (let i = assignIndex; i < Math.min(html.length, assignIndex + 1000); i++) {
-        if (html[i] === '{') {
-          braceStart = i;
-          break;
-        }
-      }
-      
-      if (braceStart !== -1) {
-        // Count braces to find the matching closing brace
-        let braceCount = 0;
-        let jsonEnd = -1;
-        
-        for (let i = braceStart; i < Math.min(html.length, braceStart + 1000000); i++) {
-          if (html[i] === '{') {
-            braceCount++;
-          } else if (html[i] === '}') {
-            braceCount--;
-            if (braceCount === 0) {
-              jsonEnd = i + 1;
-              break;
-            }
-          }
-        }
-        
-        if (jsonEnd !== -1) {
-          jsonStr = html.substring(braceStart, jsonEnd);
-        }
-      }
-    }
-  }
+  // Try brace counting first
+  let jsonStr = extractInstagramSharedDataJson(html);
   
-  // Fallback to bounded regex if brace counting fails
+  // Fallback to regex if brace counting fails
   if (!jsonStr) {
     const sharedDataRegex = /window\._sharedData\s*=\s*(\{[^;]{0,1000000}\});/;
     const sharedDataMatch = sharedDataRegex.exec(html);
@@ -587,25 +626,11 @@ function extractFromInstagramSharedData(
   
   try {
     const sharedData = JSON.parse(jsonStr);
-    const entryData = sharedData?.entry_data;
-    if (!entryData) {
-      return result;
-    }
-    
-    const postPage = entryData.PostPage?.[0]?.graphql?.shortcode_media;
-    if (postPage) {
-      if (postPage.edge_media_to_caption?.edges?.[0]?.node?.text && !result.description) {
-        result.description = postPage.edge_media_to_caption.edges[0].node.text;
-      }
-      if (postPage.display_url && !result.thumbnailUrl) {
-        result.thumbnailUrl = postPage.display_url;
-      }
-    }
+    return extractFromParsedInstagramData(sharedData, result);
   } catch (e) {
     console.debug('Failed to parse Instagram shared data:', e instanceof Error ? e.message : 'Unknown error');
+    return result;
   }
-  
-  return result;
 }
 
 function extractFromInstagramMetaTags(
@@ -641,6 +666,79 @@ function extractFromTikTokMetaTags(
     return tiktokTitle.replace(/\s*-\s*TikTok\s*$/i, '').trim();
   }
   return title;
+}
+
+/**
+ * Helper function to apply platform-specific extraction for recipe websites
+ */
+function applyRecipePlatformExtraction(
+  $: ReturnType<typeof cheerio.load>,
+  platform: string | null,
+  title: string,
+  description: string,
+  thumbnailUrl: string
+): { title: string; description: string; thumbnailUrl: string } {
+  const recipePlatforms = ['delish', 'allrecipes', 'foodnetwork', 'bonappetit', 'seriouseats', 'tasty'];
+  if (platform && recipePlatforms.includes(platform)) {
+    return extractFromJsonLdRecipe($, title, description, thumbnailUrl);
+  }
+  return { title, description, thumbnailUrl };
+}
+
+/**
+ * Helper function to apply platform-specific extraction for TikTok and Instagram
+ */
+function applyTikTokInstagramExtraction(
+  $: ReturnType<typeof cheerio.load>,
+  html: string,
+  platform: string | null,
+  title: string,
+  description: string,
+  thumbnailUrl: string
+): { title: string; description: string; thumbnailUrl: string } {
+  if (platform !== 'tiktok' && platform !== 'instagram') {
+    return { title, description, thumbnailUrl };
+  }
+  
+  let result = extractFromJsonLdTikTokInstagram($, title, description, thumbnailUrl);
+  
+  if (platform === 'instagram') {
+    const sharedDataResult = extractFromInstagramSharedData(html, result.description, result.thumbnailUrl);
+    const metaTagsResult = extractFromInstagramMetaTags($, result.title, sharedDataResult.description);
+    result = {
+      title: metaTagsResult.title,
+      description: metaTagsResult.description,
+      thumbnailUrl: sharedDataResult.thumbnailUrl,
+    };
+  }
+  
+  if (platform === 'tiktok') {
+    result.title = extractFromTikTokMetaTags($, result.title);
+  }
+  
+  return result;
+}
+
+/**
+ * Helper function to apply fallback content extraction if metadata is missing
+ */
+function applyFallbackExtraction(
+  html: string,
+  $: ReturnType<typeof cheerio.load>,
+  title: string,
+  description: string,
+  thumbnailUrl: string
+): { title: string; description: string; thumbnailUrl: string } {
+  if (title !== 'Untitled' && description && thumbnailUrl) {
+    return { title, description, thumbnailUrl };
+  }
+  
+  const contentMetadata = extractMetadataFromContent(html, $);
+  return {
+    title: title === 'Untitled' && contentMetadata.title ? contentMetadata.title : title,
+    description: description || contentMetadata.description || '',
+    thumbnailUrl,
+  };
 }
 
 export async function getVideoMetadata(url: string): Promise<VideoMetadata> {
@@ -680,35 +778,13 @@ export async function getVideoMetadata(url: string): Promise<VideoMetadata> {
     ({ title, description, thumbnailUrl } = mergeOEmbedData(oembedData, title, description, thumbnailUrl));
 
     // Platform-specific extraction for recipe websites
-    const recipePlatforms = ['delish', 'allrecipes', 'foodnetwork', 'bonappetit', 'seriouseats', 'tasty'];
-    if (platform && recipePlatforms.includes(platform)) {
-      ({ title, description, thumbnailUrl } = extractFromJsonLdRecipe($, title, description, thumbnailUrl));
-    }
+    ({ title, description, thumbnailUrl } = applyRecipePlatformExtraction($, platform, title, description, thumbnailUrl));
     
     // Platform-specific extraction for TikTok and Instagram
-    if (platform === 'tiktok' || platform === 'instagram') {
-      ({ title, description, thumbnailUrl } = extractFromJsonLdTikTokInstagram($, title, description, thumbnailUrl));
-      
-      if (platform === 'instagram') {
-        ({ description, thumbnailUrl } = extractFromInstagramSharedData(html, description, thumbnailUrl));
-        ({ title, description } = extractFromInstagramMetaTags($, title, description));
-      }
-      
-      if (platform === 'tiktok') {
-        title = extractFromTikTokMetaTags($, title);
-      }
-    }
+    ({ title, description, thumbnailUrl } = applyTikTokInstagramExtraction($, html, platform, title, description, thumbnailUrl));
 
     // Fallback: If metadata is still missing, try extracting from content
-    if (title === 'Untitled' || !description || !thumbnailUrl) {
-      const contentMetadata = extractMetadataFromContent(html, $);
-      if (title === 'Untitled' && contentMetadata.title) {
-        title = contentMetadata.title;
-      }
-      if (!description && contentMetadata.description) {
-        description = contentMetadata.description;
-      }
-    }
+    ({ title, description, thumbnailUrl } = applyFallbackExtraction(html, $, title, description, thumbnailUrl));
     
     // Log what we extracted for debugging
     console.log(`Extracted metadata for ${platform || 'unknown'} platform:`, {

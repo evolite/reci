@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from '@/components/ui/empty';
 import { generateShoppingList } from '@/lib/api';
 import type { ShoppingListResponse } from '@/lib/api';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, ShoppingCart, AlertTriangle, Check, Share2, Copy, CheckCircle2 } from 'lucide-react';
 import { useShoppingCart } from '@/hooks/useShoppingCart';
 
@@ -37,72 +37,80 @@ export function ShoppingCartDialog({ open, onOpenChange, recipeIds, onClose, onS
   const [copied, setCopied] = useState(false);
   const { updateCheckedItems, shareCart, unshareCart } = useShoppingCart();
 
-  useEffect(() => {
-    if (open) {
-      if (isSaved && currentShoppingCart) {
-        // If it's a saved cart, just display it
-        setShoppingList(currentShoppingCart.shoppingList);
-        setIsLoading(false);
-        setError(null);
-        setHasGenerated(false);
-        // Load checked items
-        if (currentShoppingCart.checkedItems) {
-          setCheckedItems(new Set(currentShoppingCart.checkedItems));
-        } else {
-          setCheckedItems(new Set());
-        }
-        // Set share URL if cart is shared
-        if (currentShoppingCart.shareToken) {
-          setShareUrl(`${globalThis.location.origin}/cart/shared/${currentShoppingCart.shareToken}`);
-        } else {
-          setShareUrl(null);
-        }
-      } else if (savedCartFromHook && isSaved) {
-        // If we have a saved cart from the hook, use it
-        setShoppingList(savedCartFromHook.shoppingList);
-        setIsLoading(false);
-        setError(null);
-        setHasGenerated(false);
-        setCheckedItems(new Set(savedCartFromHook.checkedItems));
-        if (savedCartFromHook.shareToken) {
-          setShareUrl(`${globalThis.location.origin}/cart/shared/${savedCartFromHook.shareToken}`);
-        } else {
-          setShareUrl(null);
-        }
-      } else if (recipeIds.length > 0 && !hasGenerated) {
-        // Generate new list - only once
-        setIsLoading(true);
-        setError(null);
-        setShoppingList(null);
-        setCheckedItems(new Set());
-        setHasGenerated(true);
+  // Helper function to load saved cart from currentShoppingCart
+  const loadSavedCartFromCurrent = useCallback((cart: typeof currentShoppingCart) => {
+    if (!cart) return;
+    setShoppingList(cart.shoppingList);
+    setIsLoading(false);
+    setError(null);
+    setHasGenerated(false);
+    setCheckedItems(new Set(cart.checkedItems || []));
+    setShareUrl(cart.shareToken 
+      ? `${globalThis.location.origin}/cart/shared/${cart.shareToken}`
+      : null);
+  }, []);
 
-        generateShoppingList(recipeIds)
-          .then((response) => {
-            setShoppingList(response);
-            setIsLoading(false);
-            // Auto-save when list is generated - only once
-            if (onSave && !isSaved) {
-              onSave(recipeIds, response);
-            }
-          })
-          .catch((err) => {
-            setError(err instanceof Error ? err.message : 'Failed to generate shopping list');
-            setIsLoading(false);
-            setHasGenerated(false); // Allow retry on error
-          });
-      }
-    } else {
-      // Reset when dialog closes
-      setShoppingList(null);
-      setError(null);
-      setIsLoading(false);
-      setCheckedItems(new Set());
-      setHasGenerated(false);
-      setShareUrl(null);
-      setCopied(false);
+  // Helper function to load saved cart from hook
+  const loadSavedCartFromHook = useCallback((cart: typeof savedCartFromHook) => {
+    if (!cart) return;
+    setShoppingList(cart.shoppingList);
+    setIsLoading(false);
+    setError(null);
+    setHasGenerated(false);
+    setCheckedItems(new Set(cart.checkedItems || []));
+    setShareUrl(cart.shareToken 
+      ? `${globalThis.location.origin}/cart/shared/${cart.shareToken}`
+      : null);
+  }, []);
+
+  // Helper function to reset dialog state
+  const resetDialogState = useCallback(() => {
+    setShoppingList(null);
+    setError(null);
+    setIsLoading(false);
+    setCheckedItems(new Set());
+    setHasGenerated(false);
+    setShareUrl(null);
+    setCopied(false);
+  }, []);
+
+  // Helper function to generate new shopping list
+  const generateNewShoppingList = useCallback((ids: string[]) => {
+    setIsLoading(true);
+    setError(null);
+    setShoppingList(null);
+    setCheckedItems(new Set());
+    setHasGenerated(true);
+
+    generateShoppingList(ids)
+      .then((response) => {
+        setShoppingList(response);
+        setIsLoading(false);
+        if (onSave && !isSaved) {
+          onSave(ids, response);
+        }
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'Failed to generate shopping list');
+        setIsLoading(false);
+        setHasGenerated(false);
+      });
+  }, [onSave, isSaved]);
+
+  useEffect(() => {
+    if (!open) {
+      resetDialogState();
+      return;
     }
-  }, [open, recipeIds, isSaved, currentShoppingCart, savedCartFromHook, onSave, hasGenerated]);
+
+    if (isSaved && currentShoppingCart) {
+      loadSavedCartFromCurrent(currentShoppingCart);
+    } else if (savedCartFromHook && isSaved) {
+      loadSavedCartFromHook(savedCartFromHook);
+    } else if (recipeIds.length > 0 && !hasGenerated) {
+      generateNewShoppingList(recipeIds);
+    }
+  }, [open, recipeIds, isSaved, currentShoppingCart, savedCartFromHook, onSave, hasGenerated, resetDialogState, loadSavedCartFromCurrent, loadSavedCartFromHook, generateNewShoppingList]);
 
   const handleItemCheck = (sectionIndex: number, ingredientIndex: number, checked: boolean) => {
     const key = `${sectionIndex}-${ingredientIndex}`;

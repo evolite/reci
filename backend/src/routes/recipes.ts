@@ -250,6 +250,113 @@ router.patch('/:id/tags', async (req: AuthRequest, res: Response) => {
   }
 });
 
+/**
+ * Helper function to validate all recipe update fields
+ */
+function validateRecipeUpdateFields(body: any): { valid: boolean; error?: string } {
+  const descriptionValidation = validateString(body.description, 'description', 10000);
+  if (!descriptionValidation.valid) {
+    return descriptionValidation;
+  }
+
+  const dishNameValidation = validateString(body.dishName, 'dishName', 200, 1);
+  if (!dishNameValidation.valid) {
+    return dishNameValidation;
+  }
+
+  const cuisineTypeValidation = validateString(body.cuisineType, 'cuisineType', 100);
+  if (!cuisineTypeValidation.valid) {
+    return cuisineTypeValidation;
+  }
+
+  const ingredientsValidation = validateArray(
+    body.ingredients,
+    'ingredients',
+    500,
+    (item) => validateString(item, 'ingredient', undefined, 0)
+  );
+  if (!ingredientsValidation.valid) {
+    return ingredientsValidation;
+  }
+
+  if (body.instructions !== undefined && body.instructions !== null) {
+    const instructionsValidation = validateString(body.instructions, 'instructions', 50000);
+    if (!instructionsValidation.valid) {
+      return instructionsValidation;
+    }
+  }
+
+  const tagsValidation = validateArray(
+    body.tags,
+    'tags',
+    50,
+    (item) => validateString(item, 'tag', 50, 0)
+  );
+  if (!tagsValidation.valid) {
+    return tagsValidation;
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Helper function to merge analysis results into update data
+ */
+function mergeAnalysisResults(
+  analysisResult: any,
+  updateData: any,
+  providedFields: { description?: any; dishName?: any; cuisineType?: any; ingredients?: any; tags?: any }
+): void {
+  if (providedFields.description === undefined && analysisResult.description) {
+    updateData.description = analysisResult.description;
+  }
+  if (providedFields.dishName === undefined && analysisResult.dishName) {
+    updateData.dishName = analysisResult.dishName;
+  }
+  if (providedFields.cuisineType === undefined && analysisResult.cuisineType) {
+    updateData.cuisineType = analysisResult.cuisineType;
+  }
+  if (providedFields.ingredients === undefined && analysisResult.ingredients) {
+    updateData.ingredients = analysisResult.ingredients;
+  }
+  if (analysisResult.instructions) {
+    updateData.instructions = analysisResult.instructions;
+  }
+  if (providedFields.tags === undefined && analysisResult.tags) {
+    updateData.tags = analysisResult.tags;
+  }
+}
+
+/**
+ * Helper function to handle instructions analysis and update
+ */
+async function handleInstructionsAnalysis(
+  prepared: { hasInstructions: boolean; instructionsValue: string | null },
+  existing: { instructions: string | null; description: string; tags: string[] },
+  updateData: any,
+  providedFields: { description?: any; dishName?: any; cuisineType?: any; ingredients?: any; tags?: any }
+): Promise<void> {
+  if (!prepared.hasInstructions || !prepared.instructionsValue) {
+    if (prepared.hasInstructions) {
+      updateData.instructions = null;
+    }
+    return;
+  }
+
+  const existingInstructions = existing.instructions || '';
+  const newInstructions = prepared.instructionsValue;
+
+  if (!existingInstructions && newInstructions.trim().length > 50) {
+    const analysisResult = await analyzeAndUpdateRecipe(newInstructions, {
+      description: existing.description,
+      tags: existing.tags || [],
+    });
+    mergeAnalysisResults(analysisResult, updateData, providedFields);
+  } else {
+    updateData.instructions = newInstructions;
+  }
+}
+
 // PATCH /api/recipes/:id - Update recipe fields
 router.patch('/:id', async (req: AuthRequest, res: Response) => {
   try {
@@ -257,46 +364,9 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
     const { description, dishName, cuisineType, ingredients, instructions, tags } = req.body;
 
     // Validate input fields
-    const descriptionValidation = validateString(description, 'description', 10000);
-    if (!descriptionValidation.valid) {
-      return res.status(400).json({ error: descriptionValidation.error });
-    }
-
-    const dishNameValidation = validateString(dishName, 'dishName', 200, 1);
-    if (!dishNameValidation.valid) {
-      return res.status(400).json({ error: dishNameValidation.error });
-    }
-
-    const cuisineTypeValidation = validateString(cuisineType, 'cuisineType', 100);
-    if (!cuisineTypeValidation.valid) {
-      return res.status(400).json({ error: cuisineTypeValidation.error });
-    }
-
-    const ingredientsValidation = validateArray(
-      ingredients,
-      'ingredients',
-      500,
-      (item) => validateString(item, 'ingredient', undefined, 0)
-    );
-    if (!ingredientsValidation.valid) {
-      return res.status(400).json({ error: ingredientsValidation.error });
-    }
-
-    if (instructions !== undefined && instructions !== null) {
-      const instructionsValidation = validateString(instructions, 'instructions', 50000);
-      if (!instructionsValidation.valid) {
-        return res.status(400).json({ error: instructionsValidation.error });
-      }
-    }
-
-    const tagsValidation = validateArray(
-      tags,
-      'tags',
-      50,
-      (item) => validateString(item, 'tag', 50, 0)
-    );
-    if (!tagsValidation.valid) {
-      return res.status(400).json({ error: tagsValidation.error });
+    const validation = validateRecipeUpdateFields(req.body);
+    if (!validation.valid) {
+      return res.status(400).json({ error: validation.error });
     }
 
     // Get existing recipe to check if instructions changed
@@ -319,45 +389,13 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
       const prepared = prepareUpdateData({ description, dishName, cuisineType, ingredients, instructions, tags });
       updateData = prepared.updateData;
       
-      // If instructions is provided and were previously empty, analyze it
-      if (prepared.hasInstructions && prepared.instructionsValue) {
-        const existingInstructions = existing.instructions || '';
-        const newInstructions = prepared.instructionsValue;
-        
-        // Only analyze if instructions were previously empty and new content is substantial
-        if (!existingInstructions && newInstructions.trim().length > 50) {
-          const analysisResult = await analyzeAndUpdateRecipe(newInstructions, {
-            description: existing.description,
-            tags: existing.tags || [],
-          });
-          
-          // Merge analysis results, but don't override explicitly provided fields
-          if (description === undefined && analysisResult.description) {
-            updateData.description = analysisResult.description;
-          }
-          if (dishName === undefined && analysisResult.dishName) {
-            updateData.dishName = analysisResult.dishName;
-          }
-          if (cuisineType === undefined && analysisResult.cuisineType) {
-            updateData.cuisineType = analysisResult.cuisineType;
-          }
-          if (ingredients === undefined && analysisResult.ingredients) {
-            updateData.ingredients = analysisResult.ingredients;
-          }
-          if (analysisResult.instructions) {
-            updateData.instructions = analysisResult.instructions;
-          }
-          if (tags === undefined && analysisResult.tags) {
-            updateData.tags = analysisResult.tags;
-          }
-        } else {
-          // Instructions already existed or too short - just save
-          updateData.instructions = newInstructions;
-        }
-      } else if (prepared.hasInstructions) {
-        // Instructions is null or empty
-        updateData.instructions = null;
-      }
+      // Handle instructions analysis and update
+      await handleInstructionsAnalysis(
+        prepared,
+        existing,
+        updateData,
+        { description, dishName, cuisineType, ingredients, tags }
+      );
     } catch (validationError) {
       if (validationError instanceof Error) {
         return res.status(400).json({ error: validationError.message });

@@ -82,84 +82,88 @@ function extractMetadataFromHtml(html: string, $: cheerio.CheerioAPI, videoId: s
   return { title, description, thumbnailUrl };
 }
 
-// Helper function to extract comments from HTML
-function extractCommentsFromHtml(html: string): string[] {
-  const topComments: string[] = [];
+/**
+ * Helper function to extract JSON string using brace counting
+ */
+function extractJsonByBraceCounting(html: string, startMarker: string): string | null {
+  const startIndex = html.indexOf(startMarker);
+  if (startIndex === -1) return null;
   
-  try {
-    // Try to extract ytInitialData JSON which contains comment data
-    // Use a more specific pattern to avoid catastrophic backtracking
-    // Find the start position and then search for the matching closing brace
-    const startMarker = 'var ytInitialData = ({';
-    const startIndex = html.indexOf(startMarker);
-    if (startIndex !== -1) {
-      // Find the matching closing brace by counting braces
-      let braceCount = 0;
-      let foundStart = false;
-      let jsonStart = -1;
-      let jsonEnd = -1;
-      
-      for (let i = startIndex + startMarker.length - 1; i < Math.min(html.length, startIndex + 1000000); i++) {
-        if (html[i] === '{') {
-          if (!foundStart) {
-            foundStart = true;
-            jsonStart = i;
-          }
-          braceCount++;
-        } else if (html[i] === '}') {
-          braceCount--;
-          if (braceCount === 0 && foundStart) {
-            jsonEnd = i + 1;
-            break;
-          }
-        }
+  let braceCount = 0;
+  let foundStart = false;
+  let jsonStart = -1;
+  let jsonEnd = -1;
+  
+  for (let i = startIndex + startMarker.length - 1; i < Math.min(html.length, startIndex + 1000000); i++) {
+    if (html[i] === '{') {
+      if (!foundStart) {
+        foundStart = true;
+        jsonStart = i;
       }
-      
-      if (jsonStart !== -1 && jsonEnd !== -1) {
-        const jsonStr = html.substring(jsonStart, jsonEnd);
-        try {
-          const ytInitialData = JSON.parse(jsonStr);
-          const comments = findCommentsInObject(ytInitialData);
-          
-          // Sort by length (longer comments are more likely to contain recipes) and take top 5
-          const sortedComments = comments
-            .filter((c, i, arr) => arr.indexOf(c) === i) // Remove duplicates
-            .sort((a, b) => b.length - a.length)
-            .slice(0, 5);
-          
-          topComments.push(...sortedComments);
-        } catch (parseError) {
-          console.warn('Failed to parse ytInitialData:', parseError);
-        }
+      braceCount++;
+    } else if (html[i] === '}') {
+      braceCount--;
+      if (braceCount === 0 && foundStart) {
+        jsonEnd = i + 1;
+        break;
       }
     }
-    
-    // Fallback to regex if brace counting fails (but with bounded pattern)
-    if (topComments.length === 0) {
-      const ytInitialDataRegex = /var ytInitialData = (\{[^;]{0,1000000}\});/s;
-      const ytInitialDataMatch = ytInitialDataRegex.exec(html);
-      if (ytInitialDataMatch) {
-        try {
-          const ytInitialData = JSON.parse(ytInitialDataMatch[1]);
-          const comments = findCommentsInObject(ytInitialData);
-          
-          // Sort by length (longer comments are more likely to contain recipes) and take top 5
-          const sortedComments = comments
-            .filter((c, i, arr) => arr.indexOf(c) === i) // Remove duplicates
-            .sort((a, b) => b.length - a.length)
-            .slice(0, 5);
-          
-          topComments.push(...sortedComments);
-        } catch (parseError) {
-          console.warn('Failed to parse ytInitialData:', parseError);
-        }
-      }
-    }
-  } catch (commentError) {
-    console.warn('Failed to extract comments:', commentError);
   }
   
-  return topComments;
+  if (jsonStart !== -1 && jsonEnd !== -1) {
+    return html.substring(jsonStart, jsonEnd);
+  }
+  
+  return null;
+}
+
+/**
+ * Helper function to extract and process YouTube comments from JSON data
+ */
+function processYouTubeComments(ytInitialData: any): string[] {
+  const comments = findCommentsInObject(ytInitialData);
+  return comments
+    .filter((c, i, arr) => arr.indexOf(c) === i) // Remove duplicates
+    .sort((a, b) => b.length - a.length)
+    .slice(0, 5);
+}
+
+/**
+ * Helper function to extract YouTube comments from HTML
+ */
+function extractYouTubeCommentsFromHtml(html: string): string[] {
+  // Try brace counting first
+  const startMarker = 'var ytInitialData = ({';
+  let jsonStr = extractJsonByBraceCounting(html, startMarker);
+  
+  // Fallback to regex if brace counting fails
+  if (!jsonStr) {
+    const ytInitialDataRegex = /var ytInitialData = (\{[^;]{0,1000000}\});/s;
+    const ytInitialDataMatch = ytInitialDataRegex.exec(html);
+    if (ytInitialDataMatch) {
+      jsonStr = ytInitialDataMatch[1];
+    }
+  }
+  
+  if (!jsonStr) return [];
+  
+  try {
+    const ytInitialData = JSON.parse(jsonStr);
+    return processYouTubeComments(ytInitialData);
+  } catch (parseError) {
+    console.warn('Failed to parse ytInitialData:', parseError);
+    return [];
+  }
+}
+
+// Helper function to extract comments from HTML
+function extractCommentsFromHtml(html: string): string[] {
+  try {
+    return extractYouTubeCommentsFromHtml(html);
+  } catch (commentError) {
+    console.warn('Failed to extract comments:', commentError);
+    return [];
+  }
 }
 
 export async function getVideoMetadata(videoId: string): Promise<YouTubeVideoMetadata> {
