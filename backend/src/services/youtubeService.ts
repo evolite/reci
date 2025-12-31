@@ -1,5 +1,5 @@
 import * as cheerio from 'cheerio';
-import { findCommentsInObject } from './youtubeServiceHelpers';
+import { findCommentsInObject, extractJsonByBraceCounting } from './youtubeServiceHelpers';
 
 export interface YouTubeVideoMetadata {
   title: string;
@@ -82,40 +82,6 @@ function extractMetadataFromHtml(html: string, $: cheerio.CheerioAPI, videoId: s
   return { title, description, thumbnailUrl };
 }
 
-/**
- * Helper function to extract JSON string using brace counting
- */
-function extractJsonByBraceCounting(html: string, startMarker: string): string | null {
-  const startIndex = html.indexOf(startMarker);
-  if (startIndex === -1) return null;
-  
-  let braceCount = 0;
-  let foundStart = false;
-  let jsonStart = -1;
-  let jsonEnd = -1;
-  
-  for (let i = startIndex + startMarker.length - 1; i < Math.min(html.length, startIndex + 1000000); i++) {
-    if (html[i] === '{') {
-      if (!foundStart) {
-        foundStart = true;
-        jsonStart = i;
-      }
-      braceCount++;
-    } else if (html[i] === '}') {
-      braceCount--;
-      if (braceCount === 0 && foundStart) {
-        jsonEnd = i + 1;
-        break;
-      }
-    }
-  }
-  
-  if (jsonStart !== -1 && jsonEnd !== -1) {
-    return html.substring(jsonStart, jsonEnd);
-  }
-  
-  return null;
-}
 
 /**
  * Helper function to extract and process YouTube comments from JSON data
