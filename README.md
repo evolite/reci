@@ -28,6 +28,10 @@ Most recipe managers expect you to manually type in ingredients, categorize ever
 
 **vs. ChatGPT/Claude**: AI assistants can help, but they don't remember your saved recipes or generate shopping lists from multiple dishes.
 
+## Tech Stack
+
+Built with TypeScript, React, and Vite. Uses shadcn/ui components for the UI, Prisma for the database, and OpenAI's API for recipe analysis. Backend is Express with PostgreSQL. Everything runs in Podman containers.
+
 ## Deployment
 
 ### Prerequisites
