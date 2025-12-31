@@ -4,7 +4,7 @@ After=reci-db.service
 Requires=reci-db.service
 
 [Container]
-Image=localhost/reci-backend:latest
+Image=ghcr.io/evolite/reci-backend:latest
 ContainerName=reci-backend
 Network=services-network
 Environment=DATABASE_URL=postgresql://reci:reci_password@reci-db:5432/reci_db

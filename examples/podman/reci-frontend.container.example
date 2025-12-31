@@ -7,7 +7,7 @@ BindsTo=reci-backend.service
 PartOf=reci-backend.service
 
 [Container]
-Image=localhost/reci-frontend:latest
+Image=ghcr.io/evolite/reci-frontend:latest
 ContainerName=reci-frontend
 Network=services-network
 PublishPort=4001:80

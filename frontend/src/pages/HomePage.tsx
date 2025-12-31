@@ -11,6 +11,16 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useShoppingCart, type SavedShoppingCart } from '@/hooks/useShoppingCart';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { ChefHat, LogOut, Shield, ShoppingCart } from 'lucide-react';
 
 export function HomePage() {
@@ -18,6 +28,8 @@ export function HomePage() {
   const [selectedRecipes, setSelectedRecipes] = useState<Set<string>>(new Set());
   const [showShoppingCartDialog, setShowShoppingCartDialog] = useState(false);
   const [currentShoppingCart, setCurrentShoppingCart] = useState<SavedShoppingCart | null>(null);
+  const [showNewCartDialog, setShowNewCartDialog] = useState(false);
+  const [pendingRecipeIds, setPendingRecipeIds] = useState<string[]>([]);
   const { data: allRecipes = [], isLoading: isLoadingAll } = useRecipes();
   const { data: searchResults = [], isLoading: isLoadingSearch } = useSearchRecipes(searchQuery);
   const { user, logout } = useAuth();
@@ -42,6 +54,40 @@ export function HomePage() {
   const handleLogout = () => {
     logout();
     navigate('/signup');
+  };
+
+  const handleCreateShoppingCart = () => {
+    const newRecipeIds = Array.from(selectedRecipes);
+    const existingCart = currentShoppingCart || savedCart;
+    
+    // Check if there's an existing cart with different recipes
+    if (existingCart) {
+      const existingRecipeIds = existingCart.recipeIds;
+      const recipeIdsMatch = newRecipeIds.length === existingRecipeIds.length &&
+        newRecipeIds.every(id => existingRecipeIds.includes(id)) &&
+        existingRecipeIds.every(id => newRecipeIds.includes(id));
+      
+      if (!recipeIdsMatch) {
+        // Recipes are different, ask for confirmation
+        setPendingRecipeIds(newRecipeIds);
+        setShowNewCartDialog(true);
+        return;
+      }
+    }
+    
+    // No existing cart or recipes match, proceed normally
+    setShowShoppingCartDialog(true);
+  };
+
+  const handleConfirmNewCart = async () => {
+    // Remove existing cart
+    if (savedCart) {
+      await removeShoppingCart();
+    }
+    setCurrentShoppingCart(null);
+    setShowNewCartDialog(false);
+    // Now open the dialog with new recipes
+    setShowShoppingCartDialog(true);
   };
 
   return (
@@ -118,7 +164,7 @@ export function HomePage() {
           <div className="flex gap-2">
             {selectedRecipes.size > 0 && (
               <Button
-                onClick={() => setShowShoppingCartDialog(true)}
+                onClick={handleCreateShoppingCart}
                 className="bg-orange-500 hover:bg-orange-600"
               >
                 <ShoppingCart className="w-4 h-4 mr-2" />
@@ -144,20 +190,49 @@ export function HomePage() {
           />
         )}
 
+        {/* New Cart Confirmation Dialog */}
+        <AlertDialog open={showNewCartDialog} onOpenChange={setShowNewCartDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Start New Shopping List?</AlertDialogTitle>
+              <AlertDialogDescription>
+                You already have a shopping list saved. Starting a new one will replace your current shopping list. Are you sure you want to continue?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => {
+                setShowNewCartDialog(false);
+                // Show existing cart instead
+                if (savedCart) {
+                  setCurrentShoppingCart(savedCart);
+                  setShowShoppingCartDialog(true);
+                }
+              }}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmNewCart}>
+                Start New List
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         {/* Shopping Cart Dialog */}
         <ShoppingCartDialog
           open={showShoppingCartDialog}
           onOpenChange={setShowShoppingCartDialog}
-          recipeIds={currentShoppingCart ? currentShoppingCart.recipeIds : Array.from(selectedRecipes)}
+          recipeIds={currentShoppingCart ? currentShoppingCart.recipeIds : (pendingRecipeIds.length > 0 ? pendingRecipeIds : Array.from(selectedRecipes))}
           onClose={() => {
             setShowShoppingCartDialog(false);
             setSelectedRecipes(new Set());
             setCurrentShoppingCart(null);
+            setPendingRecipeIds([]);
           }}
           onSave={async (recipeIds, shoppingList) => {
             await saveShoppingCart(recipeIds, shoppingList);
+            setPendingRecipeIds([]);
           }}
-          isSaved={currentShoppingCart !== null || savedCart !== null}
+          isSaved={currentShoppingCart !== null || (savedCart !== null && pendingRecipeIds.length === 0)}
           currentShoppingCart={currentShoppingCart ? { 
             id: currentShoppingCart.id, 
             recipeIds: currentShoppingCart.recipeIds, 
@@ -165,7 +240,7 @@ export function HomePage() {
             checkedItems: currentShoppingCart.checkedItems,
             shareToken: currentShoppingCart.shareToken
           } : null}
-          savedCartFromHook={savedCart ? {
+          savedCartFromHook={savedCart && pendingRecipeIds.length === 0 ? {
             id: savedCart.id,
             recipeIds: savedCart.recipeIds,
             shoppingList: savedCart.shoppingList,
