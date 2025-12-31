@@ -14,15 +14,15 @@ import { X, ShoppingCart, AlertTriangle, Check, Share2, Copy, CheckCircle2 } fro
 import { useShoppingCart } from '@/hooks/useShoppingCart';
 
 interface ShoppingCartDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  recipeIds: string[];
-  onClose: () => void;
-  onSave?: (recipeIds: string[], shoppingList: ShoppingListResponse) => void;
-  isSaved?: boolean;
-  onComplete?: () => void;
-  currentShoppingCart?: { id: string; recipeIds: string[]; shoppingList: ShoppingListResponse; checkedItems?: string[]; shareToken?: string | null } | null;
-  savedCartFromHook?: { id: string; recipeIds: string[]; shoppingList: ShoppingListResponse; checkedItems: string[]; shareToken: string | null } | null;
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly recipeIds: string[];
+  readonly onClose: () => void;
+  readonly onSave?: (recipeIds: string[], shoppingList: ShoppingListResponse) => void;
+  readonly isSaved?: boolean;
+  readonly onComplete?: () => void;
+  readonly currentShoppingCart?: { id: string; recipeIds: string[]; shoppingList: ShoppingListResponse; checkedItems?: string[]; shareToken?: string | null } | null;
+  readonly savedCartFromHook?: { id: string; recipeIds: string[]; shoppingList: ShoppingListResponse; checkedItems: string[]; shareToken: string | null } | null;
 }
 
 export function ShoppingCartDialog({ open, onOpenChange, recipeIds, onClose, onSave, isSaved = false, onComplete, currentShoppingCart, savedCartFromHook }: ShoppingCartDialogProps) {
@@ -65,7 +65,7 @@ export function ShoppingCartDialog({ open, onOpenChange, recipeIds, onClose, onS
         setHasGenerated(false);
         setCheckedItems(new Set(savedCartFromHook.checkedItems));
         if (savedCartFromHook.shareToken) {
-          setShareUrl(`${window.location.origin}/cart/shared/${savedCartFromHook.shareToken}`);
+          setShareUrl(`${globalThis.location.origin}/cart/shared/${savedCartFromHook.shareToken}`);
         } else {
           setShareUrl(null);
         }

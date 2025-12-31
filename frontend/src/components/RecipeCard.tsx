@@ -218,13 +218,15 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
   return (
     <>
       <Card 
-        className={`transition-all duration-300 hover:scale-[1.02] border-2 overflow-hidden group ${
-          isEditing 
-            ? 'border-orange-400 cursor-default' 
-            : isSelected
-            ? 'border-orange-500 cursor-pointer hover:shadow-xl bg-orange-50/50 dark:bg-orange-900/20'
-            : 'cursor-pointer hover:shadow-xl hover:border-orange-300'
-        }`}
+        className={(() => {
+          if (isEditing) {
+            return 'transition-all duration-300 hover:scale-[1.02] border-2 overflow-hidden group border-orange-400 cursor-default';
+          }
+          if (isSelected) {
+            return 'transition-all duration-300 hover:scale-[1.02] border-2 overflow-hidden group border-orange-500 cursor-pointer hover:shadow-xl bg-orange-50/50 dark:bg-orange-900/20';
+          }
+          return 'transition-all duration-300 hover:scale-[1.02] border-2 overflow-hidden group cursor-pointer hover:shadow-xl hover:border-orange-300';
+        })()}
         onClick={handleCardClick}
       >
         <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800 relative">
@@ -238,16 +240,15 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center">
                 <ExternalLink className="w-8 h-8 sm:w-10 sm:h-10 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>
-              <div
+              <button
+                type="button"
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.stopPropagation();
                   }
                 }}
-                role="button"
-                tabIndex={0}
-                className="absolute top-2 left-2 bg-white/90 hover:bg-white dark:bg-gray-800/90 dark:hover:bg-gray-800 shadow-lg rounded-md p-1"
+                className="absolute top-2 left-2 bg-white/90 hover:bg-white dark:bg-gray-800/90 dark:hover:bg-gray-800 shadow-lg rounded-md p-1 border-0 cursor-pointer"
               >
                 <Checkbox
                   checked={isSelected}
@@ -261,7 +262,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
                   className="h-6 w-6 border-2 border-gray-300 dark:border-gray-600 data-[state=checked]:bg-orange-500/80 data-[state=checked]:border-orange-500/80 data-[state=checked]:text-white"
                   aria-label={isSelected ? 'Deselect recipe' : 'Select recipe'}
                 />
-              </div>
+              </button>
               <Button
                 onClick={handleEdit}
                 size="sm"
@@ -388,7 +389,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
                   ))}
                 </div>
                 <Form {...tagForm}>
-                  <form onSubmit={tagForm.handleSubmit(handleAddTag)} onClick={(e) => e.stopPropagation()} className="flex gap-1">
+                  <form onSubmit={tagForm.handleSubmit(handleAddTag)} onKeyDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} className="flex gap-1">
                     <FormField
                       control={tagForm.control}
                       name="tag"

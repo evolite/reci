@@ -180,7 +180,7 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
                   steps = instructions.split(/\.\s+/).map((step) => step.trim()).filter((step) => step.length > 0);
                   
                   return steps.map((step, index) => {
-                    const cleanStep = step.replace(/^\d+[\.\)]\s*/, '').trim();
+                    const cleanStep = step.replace(/^\d+[.)]\s*/, '').trim();
                     return (
                       <li key={`${cleanStep}-${index}`} className="flex items-start">
                         <span className="mr-3 text-orange-600 font-semibold min-w-[24px]">{index + 1}.</span>

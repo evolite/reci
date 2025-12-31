@@ -67,7 +67,8 @@ export function sanitizeInput(input: string, maxLength: number = 10000): string 
 
   // Remove null bytes and control characters (except newlines and tabs for recipe text)
   // Exclude \u0009 (tab) and \u000A (newline) from removal
-  const controlCharPattern = /[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F]/g;
+  // Using String.raw to avoid control character issues in the pattern itself
+  const controlCharPattern = new RegExp(String.raw`[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F]`, 'g');
   let sanitized = input.replaceAll(controlCharPattern, '');
   
   // Limit length
@@ -94,7 +95,7 @@ function isPrivateIP(ip: string): boolean {
   if (parts.length !== 4) return false;
   
   // Check for invalid parts
-  if (parts.some(part => isNaN(part) || part < 0 || part > 255)) {
+  if (parts.some(part => Number.isNaN(part) || part < 0 || part > 255)) {
     return false;
   }
   

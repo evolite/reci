@@ -123,14 +123,20 @@ function createFallbackAnalysis(title: string, description: string): RecipeAnaly
 
 function parseAndValidateResponse(cleanedContent: string, sanitizedTitle: string, sanitizedDescription: string): RecipeAnalysis {
   try {
-    const parsed = JSON.parse(cleanedContent) as any;
+    const parsed: unknown = JSON.parse(cleanedContent);
     
-    if (parsed.error && !parsed.dishName) {
+    if (typeof parsed === 'object' && parsed !== null && 'error' in parsed && !('dishName' in parsed)) {
       console.warn('OpenAI returned an error object. Creating fallback recipe data from available information.');
       return createFallbackAnalysis(sanitizedTitle, sanitizedDescription);
     }
     
-    return parsed as RecipeAnalysis;
+    // Type guard to ensure parsed is RecipeAnalysis
+    if (typeof parsed === 'object' && parsed !== null && 'dishName' in parsed) {
+      return parsed as RecipeAnalysis;
+    }
+    
+    // Fallback if parsing fails
+    return createFallbackAnalysis(sanitizedTitle, sanitizedDescription);
   } catch (parseError) {
     console.error('Failed to parse OpenAI response. Raw content:', cleanedContent.substring(0, 500));
     throw new Error(`Failed to parse JSON response from OpenAI: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);

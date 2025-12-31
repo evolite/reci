@@ -13,16 +13,15 @@ const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div 
-        className="fixed inset-0 bg-black/50" 
+      <button
+        type="button"
+        className="fixed inset-0 bg-black/50 border-0 p-0 cursor-pointer"
         onClick={() => onOpenChange(false)}
         onKeyDown={(e) => {
           if (e.key === 'Escape') {
             onOpenChange(false);
           }
         }}
-        role="button"
-        tabIndex={0}
         aria-label="Close dialog"
       />
       <div className="relative z-50">

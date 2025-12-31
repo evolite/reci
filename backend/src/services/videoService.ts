@@ -482,7 +482,8 @@ function extractFromInstagramSharedData(
   thumbnailUrl: string
 ): { description: string; thumbnailUrl: string } {
   let result = { description, thumbnailUrl };
-  const sharedDataMatch = html.match(/window\._sharedData\s*=\s*({.+?});/);
+  const sharedDataRegex = /window\._sharedData\s*=\s*({.+?});/;
+  const sharedDataMatch = sharedDataRegex.exec(html);
   
   if (!sharedDataMatch) {
     return result;
