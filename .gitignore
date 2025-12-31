@@ -60,3 +60,6 @@ coverage/
 *.pem
 *.key
 *.crt
+
+# Local deployment scripts
+redeploy-local.sh
