@@ -116,6 +116,28 @@ async function deleteWithAuth(url: string, errorMessage: string): Promise<void> 
   }
 }
 
+// Generic helper for authenticated API requests
+async function apiRequest<T>(
+  url: string,
+  options: {
+    method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+    body?: unknown;
+  } = {}
+): Promise<T> {
+  const { method = 'GET', body } = options;
+  const fetchOptions: RequestInit = {
+    method,
+    headers: getAuthHeaders(),
+  };
+  
+  if (body) {
+    fetchOptions.body = JSON.stringify(body);
+  }
+  
+  const response = await fetch(`${API_BASE_URL}${url}`, fetchOptions);
+  return handleApiResponse<T>(response);
+}
+
 export interface Recipe {
   id: string;
   videoUrl: string;
@@ -238,21 +260,14 @@ export interface InviteStats {
 }
 
 export async function createInvite(email?: string, expiresInDays?: number): Promise<{ invite: Invite }> {
-  const response = await fetch(`${API_BASE_URL}/api/invites`, {
+  return apiRequest<{ invite: Invite }>('/api/invites', {
     method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ email, expiresInDays }),
+    body: { email, expiresInDays },
   });
-
-  return handleApiResponse<{ invite: Invite }>(response);
 }
 
 export async function getInvites(): Promise<{ invites: Invite[] }> {
-  const response = await fetch(`${API_BASE_URL}/api/invites`, {
-    headers: getAuthHeaders(),
-  });
-
-  return handleApiResponse<{ invites: Invite[] }>(response);
+  return apiRequest<{ invites: Invite[] }>('/api/invites');
 }
 
 export async function deleteInvite(inviteId: string): Promise<void> {
@@ -260,70 +275,45 @@ export async function deleteInvite(inviteId: string): Promise<void> {
 }
 
 export async function getInviteStats(): Promise<{ stats: InviteStats }> {
-  const response = await fetch(`${API_BASE_URL}/api/invites/stats`, {
-    headers: getAuthHeaders(),
-  });
-
-  return handleApiResponse<{ stats: InviteStats }>(response);
+  return apiRequest<{ stats: InviteStats }>('/api/invites/stats');
 }
 
 // Recipe API functions (updated to include auth)
 export async function addRecipe(videoUrl: string): Promise<Recipe> {
-  const response = await fetch(`${API_BASE_URL}/api/recipes`, {
+  return apiRequest<Recipe>('/api/recipes', {
     method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ videoUrl }),
+    body: { videoUrl },
   });
-
-  return handleApiResponse<Recipe>(response);
 }
 
 export async function getRecipes(): Promise<Recipe[]> {
-  const response = await fetch(`${API_BASE_URL}/api/recipes`, {
-    headers: getAuthHeaders(),
-  });
-  return handleApiResponse<Recipe[]>(response);
+  return apiRequest<Recipe[]>('/api/recipes');
 }
 
 export async function getRecipe(id: string): Promise<Recipe> {
-  const response = await fetch(`${API_BASE_URL}/api/recipes/${id}`, {
-    headers: getAuthHeaders(),
-  });
-  return handleApiResponse<Recipe>(response);
+  return apiRequest<Recipe>(`/api/recipes/${id}`);
 }
 
 export async function searchRecipes(query: string): Promise<Recipe[]> {
-  const response = await fetch(`${API_BASE_URL}/api/recipes/search?q=${encodeURIComponent(query)}`, {
-    headers: getAuthHeaders(),
-  });
-  return handleApiResponse<Recipe[]>(response);
+  return apiRequest<Recipe[]>(`/api/recipes/search?q=${encodeURIComponent(query)}`);
 }
 
 export async function getRandomRecipe(): Promise<Recipe> {
-  const response = await fetch(`${API_BASE_URL}/api/recipes/random`, {
-    headers: getAuthHeaders(),
-  });
-  return handleApiResponse<Recipe>(response);
+  return apiRequest<Recipe>('/api/recipes/random');
 }
 
 export async function updateRecipeTags(recipeId: string, tags: string[]): Promise<Recipe> {
-  const response = await fetch(`${API_BASE_URL}/api/recipes/${recipeId}/tags`, {
+  return apiRequest<Recipe>(`/api/recipes/${recipeId}/tags`, {
     method: 'PATCH',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ tags }),
+    body: { tags },
   });
-
-  return handleApiResponse<Recipe>(response);
 }
 
 export async function updateRecipe(recipeId: string, updates: Partial<Recipe>): Promise<Recipe> {
-  const response = await fetch(`${API_BASE_URL}/api/recipes/${recipeId}`, {
+  return apiRequest<Recipe>(`/api/recipes/${recipeId}`, {
     method: 'PATCH',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(updates),
+    body: updates,
   });
-
-  return handleApiResponse<Recipe>(response);
 }
 
 export async function deleteRecipe(recipeId: string): Promise<void> {
@@ -331,30 +321,21 @@ export async function deleteRecipe(recipeId: string): Promise<void> {
 }
 
 export async function rescrapeRecipe(recipeId: string): Promise<Recipe> {
-  const response = await fetch(`${API_BASE_URL}/api/recipes/${recipeId}/rescrape`, {
+  return apiRequest<Recipe>(`/api/recipes/${recipeId}/rescrape`, {
     method: 'POST',
-    headers: getAuthHeaders(),
   });
-
-  return handleApiResponse<Recipe>(response);
 }
 
 export async function analyzeRecipeVision(recipeId: string): Promise<Recipe> {
-  const response = await fetch(`${API_BASE_URL}/api/recipes/${recipeId}/analyze-vision`, {
+  return apiRequest<Recipe>(`/api/recipes/${recipeId}/analyze-vision`, {
     method: 'POST',
-    headers: getAuthHeaders(),
   });
-
-  return handleApiResponse<Recipe>(response);
 }
 
 export async function rescrapeAndAnalyzeRecipe(recipeId: string): Promise<Recipe> {
-  const response = await fetch(`${API_BASE_URL}/api/recipes/${recipeId}/rescrape-and-analyze`, {
+  return apiRequest<Recipe>(`/api/recipes/${recipeId}/rescrape-and-analyze`, {
     method: 'POST',
-    headers: getAuthHeaders(),
   });
-
-  return handleApiResponse<Recipe>(response);
 }
 
 // Shopping List API functions
@@ -374,13 +355,10 @@ export interface ShoppingListResponse {
 }
 
 export async function generateShoppingList(recipeIds: string[]): Promise<ShoppingListResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/recipes/shopping-list`, {
+  return apiRequest<ShoppingListResponse>('/api/recipes/shopping-list', {
     method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ recipeIds }),
+    body: { recipeIds },
   });
-
-  return handleApiResponse<ShoppingListResponse>(response);
 }
 
 // Shopping Cart API functions
@@ -414,21 +392,14 @@ export interface ShareCartResponse {
 }
 
 export async function getShoppingCart(): Promise<ShoppingCartResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/cart`, {
-    headers: getAuthHeaders(),
-  });
-
-  return handleApiResponse<ShoppingCartResponse>(response);
+  return apiRequest<ShoppingCartResponse>('/api/cart');
 }
 
 export async function saveShoppingCart(cart: ShoppingCartRequest): Promise<ShoppingCartResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/cart`, {
+  return apiRequest<ShoppingCartResponse>('/api/cart', {
     method: 'PUT',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(cart),
+    body: cart,
   });
-
-  return handleApiResponse<ShoppingCartResponse>(response);
 }
 
 export async function deleteShoppingCart(): Promise<void> {
@@ -444,12 +415,9 @@ export async function updateSharedCart(shareToken: string, checkedItems: string[
 }
 
 export async function shareShoppingCart(): Promise<ShareCartResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/cart/share`, {
+  return apiRequest<ShareCartResponse>('/api/cart/share', {
     method: 'POST',
-    headers: getAuthHeaders(),
   });
-
-  return handleApiResponse<ShareCartResponse>(response);
 }
 
 export async function unshareShoppingCart(): Promise<void> {
@@ -458,27 +426,16 @@ export async function unshareShoppingCart(): Promise<void> {
 
 // Settings API
 export async function getSettings(): Promise<Record<string, string>> {
-  const response = await fetch(`${API_BASE_URL}/api/settings`, {
-    headers: getAuthHeaders(),
-  });
-
-  return handleApiResponse<Record<string, string>>(response);
+  return apiRequest<Record<string, string>>('/api/settings');
 }
 
 export async function getSetting(key: string): Promise<{ key: string; value: string; description?: string }> {
-  const response = await fetch(`${API_BASE_URL}/api/settings/${key}`, {
-    headers: getAuthHeaders(),
-  });
-
-  return handleApiResponse<{ key: string; value: string; description?: string }>(response);
+  return apiRequest<{ key: string; value: string; description?: string }>(`/api/settings/${key}`);
 }
 
 export async function updateSetting(key: string, value: string, description?: string): Promise<{ key: string; value: string; description?: string }> {
-  const response = await fetch(`${API_BASE_URL}/api/settings/${key}`, {
+  return apiRequest<{ key: string; value: string; description?: string }>(`/api/settings/${key}`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ value, description }),
+    body: { value, description },
   });
-
-  return handleApiResponse<{ key: string; value: string; description?: string }>(response);
 }
