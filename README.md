@@ -1,50 +1,44 @@
-# Reci - Recipe Video Manager
+# Reci
 
-A modern full-stack application for managing and organizing recipe videos from YouTube with AI-powered tagging and smart search capabilities.
+**A personal recipe video library for my family and me.**
 
-## Features
+I built this because I kept finding amazing recipes on YouTube, TikTok, and Instagram, saving them to playlists or screenshots, and then completely forgetting about them. My family and I would stumble upon great recipes on social media, but we never actually used them because they were buried in playlists or lost in photo albums.
 
-- 🎥 **Quick Add**: Paste any YouTube recipe URL and let AI automatically extract ingredients, instructions, and tags
-- 🔍 **Smart Search**: Find recipes by dish name, cuisine, ingredients, or tags
-- 🤖 **AI-Powered**: Advanced AI analyzes videos and comments to automatically tag and organize recipes
-- 👥 **Multi-User**: Invite-based registration system with admin controls
-- 📱 **Responsive**: Modern UI built with React, TypeScript, and Tailwind CSS
+Reci solves that problem by turning recipe videos into a searchable, organized collection that we actually use.
 
-## Tech Stack
+## Why I Built This
 
-### Frontend
-- React 18 with TypeScript
-- Vite
-- Shadcn/ui components
-- Tailwind CSS
-- TanStack Query
-- React Router
+Most recipe managers expect you to manually type in ingredients, categorize everything, and maintain your own database. That's too much work. I wanted something that:
 
-### Backend
-- Node.js with Express
-- TypeScript
-- Prisma ORM
-- PostgreSQL
-- OpenAI API (GPT-4, GPT-4o)
-- JWT authentication
+- **Works with video content**: Built specifically for recipe videos from YouTube, TikTok, Instagram, etc. Just paste a URL and it handles the rest.
+- **Actually extracts recipes**: Uses AI to watch the video, read the comments, and extract everything—ingredients, instructions, tags, even cooking tips from the community. No manual data entry.
+- **Easy to add**: The whole point is making it effortless to save recipes we find. Paste a URL, done.
+- **Easy to search**: Find recipes by ingredient ("what can I make with chicken and tomatoes?"), cuisine type, tags, or just browse. The recipes are actually discoverable.
+- **Smart shopping lists**: Select multiple recipes and get a consolidated shopping list with ingredients grouped by category. Share it with family members.
+- **Metric by default**: Automatically converts everything to metric units. No more "how many grams is 2 cups of flour?" moments.
+- **Shareable**: Generate shareable links for shopping lists. Perfect for meal planning with family.
 
-### Infrastructure
-- Podman containers
-- Docker images
-- GitHub Actions for CI/CD
+## What Makes This Different
 
-## Getting Started
+**vs. Paprika/AnyList/RecipeBox**: Those are great for typed recipes, but they don't understand video content. Reci extracts recipes directly from video descriptions and comments.
+
+**vs. YouTube Playlists**: Playlists are just links. Reci extracts the actual recipe data, making it searchable and usable even if the video gets deleted.
+
+**vs. Pinterest**: Pinterest is visual discovery, but terrible for actually cooking. Reci gives you structured ingredients and instructions, not just pretty pictures.
+
+**vs. ChatGPT/Claude**: AI assistants can help, but they don't remember your saved recipes or generate shopping lists from multiple dishes.
+
+## Deployment
 
 ### Prerequisites
 
-- Node.js 20+
 - Podman or Docker
 - PostgreSQL database
-- OpenAI API key
+- OpenAI API key (for recipe analysis)
 
 ### Environment Variables
 
-#### Backend (`.env`)
+**Backend** (`.env`):
 ```env
 DATABASE_URL="postgresql://user:password@host:5432/reci_db"
 OPENAI_API_KEY="your-openai-api-key"
@@ -53,33 +47,20 @@ JWT_EXPIRES_IN="7d"
 PORT=4000
 ```
 
-#### Frontend (`.env`)
+**Frontend** (`.env`):
 ```env
 VITE_API_BASE_URL=""
 ```
 
 ### Installation
 
-1. Clone the repository:
+1. **Clone the repo:**
 ```bash
 git clone https://github.com/evolite/reci.git
 cd reci
 ```
 
-2. Install dependencies:
-```bash
-# Backend
-cd backend
-npm install
-npx prisma generate
-npx prisma db push
-
-# Frontend
-cd ../frontend
-npm install
-```
-
-3. Build and run with Podman:
+2. **Build and run with Podman:**
 ```bash
 # Build images
 podman build -t localhost/reci-backend:latest ./backend
@@ -91,42 +72,32 @@ systemctl --user start reci-frontend.service
 systemctl --user start reci-db.service
 ```
 
-## Docker Images
+Or with Docker:
+```bash
+# Build images
+docker build -t reci-backend:latest ./backend
+docker build -t reci-frontend:latest ./frontend
 
-Docker images are automatically built and pushed to GitHub Container Registry (ghcr.io) on push to main/master branch:
+# Run with docker-compose or your preferred orchestration
+```
 
+Pre-built images are available on GitHub Container Registry:
 - `ghcr.io/evolite/reci-backend:latest`
 - `ghcr.io/evolite/reci-frontend:latest`
 
-## Development
+## Contributing
 
-### Backend
-```bash
-cd backend
-npm run dev
-```
-
-### Frontend
-```bash
-cd frontend
-npm run dev
-```
-
-## Project Structure
-
-```
-reci/
-├── backend/          # Express API server
-│   ├── src/         # TypeScript source files
-│   ├── prisma/      # Database schema
-│   └── Dockerfile
-├── frontend/         # React application
-│   ├── src/         # React components and pages
-│   └── Dockerfile
-├── containers/       # Podman quadlet service files
-└── .github/         # GitHub Actions workflows
-```
+This is a personal project, but contributions are welcome! Feel free to:
+- Open issues for bugs or feature requests
+- Submit pull requests
+- Share feedback or ideas
 
 ## License
 
-MIT
+MIT - Do whatever you want with it.
+
+---
+
+**Built for my family and me, for people who love cooking but hate organizing recipes.**
+
+*This project was vibe coded. I make no guarantees about code quality, security, or reliability. Use at your own risk.*
