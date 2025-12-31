@@ -542,3 +542,30 @@ export async function unshareShoppingCart(): Promise<void> {
     throw new Error(error.error || 'Failed to unshare shopping cart');
   }
 }
+
+// Settings API
+export async function getSettings(): Promise<Record<string, string>> {
+  const response = await fetch(`${API_BASE_URL}/api/settings`, {
+    headers: getAuthHeaders(),
+  });
+
+  return handleApiResponse<Record<string, string>>(response);
+}
+
+export async function getSetting(key: string): Promise<{ key: string; value: string; description?: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/settings/${key}`, {
+    headers: getAuthHeaders(),
+  });
+
+  return handleApiResponse<{ key: string; value: string; description?: string }>(response);
+}
+
+export async function updateSetting(key: string, value: string, description?: string): Promise<{ key: string; value: string; description?: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/settings/${key}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ value, description }),
+  });
+
+  return handleApiResponse<{ key: string; value: string; description?: string }>(response);
+}

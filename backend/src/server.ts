@@ -6,6 +6,7 @@ import authRoutes from './routes/auth';
 import inviteRoutes from './routes/invites';
 import waitlistRoutes from './routes/waitlist';
 import { cartRouter, cartPublicRouter } from './routes/cart';
+import settingsRoutes from './routes/settings';
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ app.use('/api/waitlist', waitlistRoutes);
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/cart', cartRouter);
 app.use('/api/cart', cartPublicRouter);
+app.use('/api/settings', settingsRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

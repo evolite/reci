@@ -161,9 +161,14 @@ export function AdminInvitesPage() {
               <p className="text-sm text-muted-foreground">Manage user invites</p>
             </div>
           </div>
-          <Button onClick={() => navigate('/')} variant="outline">
-            Back to Recipes
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => navigate('/admin/settings')} variant="outline">
+              Settings
+            </Button>
+            <Button onClick={() => navigate('/')} variant="outline">
+              Back to Recipes
+            </Button>
+          </div>
         </div>
 
         {error && (

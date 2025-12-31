@@ -1,17 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { useForm } from 'react-hook-form';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
-import { ChefHat, Sparkles, Search, Plus, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
-import { joinWaitlist } from '@/lib/api';
-
-interface WaitlistFormValues {
-  email: string;
-}
+import { ChefHat, Sparkles, Search, Plus, ArrowRight, Github, Server, Tag } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface Recipe {
   id: string;
@@ -23,28 +15,15 @@ interface Recipe {
   tags: string[];
 }
 
-interface WaitlistResponse {
-  email: string;
-  position: number;
-  message: string;
-}
-
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+const GITHUB_URL = 'https://github.com/evolite/reci';
 
 export function LandingPage() {
   const [searchParams] = useSearchParams();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
-  const [waitlistLoading, setWaitlistLoading] = useState(false);
-  const [waitlistSuccess, setWaitlistSuccess] = useState<WaitlistResponse | null>(null);
-  const [waitlistError, setWaitlistError] = useState('');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const hasInviteToken = searchParams.get('token');
-  const waitlistForm = useForm<WaitlistFormValues>({
-    defaultValues: {
-      email: '',
-    },
-  });
 
   useEffect(() => {
     // Fetch public recipes
@@ -113,21 +92,6 @@ export function LandingPage() {
     };
   }, [recipes]);
 
-  const handleJoinWaitlist = async (values: WaitlistFormValues) => {
-    setWaitlistError('');
-    setWaitlistSuccess(null);
-    setWaitlistLoading(true);
-
-    try {
-      const data = await joinWaitlist(values.email);
-      setWaitlistSuccess(data);
-      waitlistForm.reset();
-    } catch (err) {
-      setWaitlistError(err instanceof Error ? err.message : 'Failed to join waitlist');
-    } finally {
-      setWaitlistLoading(false);
-    }
-  };
 
   // If user has invite token, show registration link
   if (hasInviteToken) {
@@ -178,10 +142,23 @@ export function LandingPage() {
               Your Personal Recipe Video Library
             </p>
             <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
-              Save, organize, and discover amazing recipes from YouTube. AI-powered tagging and smart search make finding your next meal effortless.
+              Save your favorite recipes from videos, blogs, and recipe sites. Discover them later with AI-powered tagging and smart search.
+            </p>
+            <p className="text-base text-gray-700 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
+              This is a self-hosted project. Deploy it yourself with Docker or Podman.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+              <a 
+                href={GITHUB_URL} 
+                target="_blank" 
+                rel="noopener noreferrer"
+              >
+                <Button size="lg" className="w-full sm:w-auto bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700">
+                  <Github className="w-4 h-4 mr-2" />
+                  View on GitHub
+                </Button>
+              </a>
               <Link to="/login">
                 <Button variant="outline" size="lg" className="w-full sm:w-auto">
                   Already have an account? Login
@@ -197,7 +174,7 @@ export function LandingPage() {
                 </div>
                 <h3 className="text-sm font-semibold mb-1">Quick Add</h3>
                 <p className="text-xs text-muted-foreground">
-                  Paste YouTube URLs
+                  Paste recipe URLs
                 </p>
               </Card>
               <Card className="text-center p-4 border-2 border-orange-200 dark:border-orange-800">
@@ -228,11 +205,14 @@ export function LandingPage() {
         <section className="w-full py-12 bg-gradient-to-r from-orange-500 to-amber-600">
           <div className="container mx-auto px-4">
             <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 text-white">
-              Discover Amazing Recipes
+              Save Your Favorites, Discover Them Later
             </h2>
+            <p className="text-center text-white/90 mb-8 max-w-2xl mx-auto">
+              Add recipes from any source and find them easily later with smart search and AI-powered organization.
+            </p>
             <div
               ref={scrollContainerRef}
-              className="flex gap-6 overflow-x-hidden"
+              className="flex gap-6 overflow-x-hidden items-stretch"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
               <style>{`
@@ -243,27 +223,51 @@ export function LandingPage() {
               {recipes.map((recipe) => (
                 <Card
                   key={recipe.id}
-                  className="flex-shrink-0 w-72 sm:w-80 overflow-hidden group cursor-pointer hover:scale-105 transition-transform duration-300 bg-white dark:bg-gray-800"
+                  className="flex-shrink-0 w-80 sm:w-96 h-full flex flex-col overflow-hidden group cursor-pointer hover:scale-105 transition-transform duration-300 bg-white dark:bg-gray-800"
                 >
-                  <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
+                  <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0">
                     <img
                       src={recipe.thumbnailUrl}
                       alt={recipe.dishName}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
                   </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold text-sm sm:text-base line-clamp-2 mb-1">
+                  <CardContent className="p-4 flex-1 flex flex-col">
+                    <h3 className="font-semibold text-base sm:text-lg mb-2 line-clamp-2">
                       {recipe.dishName}
                     </h3>
-                    <p className="text-xs text-muted-foreground line-clamp-2">
+                    <p className="text-sm text-muted-foreground mb-3 flex-1 line-clamp-4">
                       {recipe.description}
                     </p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-xs bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-2 py-1 rounded">
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
                         {recipe.cuisineType}
-                      </span>
+                      </Badge>
                     </div>
+                    {recipe.tags && recipe.tags.length > 0 && (
+                      <div className="border-t pt-3 mt-auto">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Tag className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-xs font-medium text-muted-foreground">Tags</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {recipe.tags.slice(0, 6).map((tag, index) => (
+                            <Badge
+                              key={index}
+                              variant="outline"
+                              className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-700"
+                            >
+                              {tag}
+                            </Badge>
+                          ))}
+                          {recipe.tags.length > 6 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{recipe.tags.length - 6}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
@@ -271,27 +275,51 @@ export function LandingPage() {
               {recipes.map((recipe) => (
                 <Card
                   key={`${recipe.id}-dup`}
-                  className="flex-shrink-0 w-72 sm:w-80 overflow-hidden group cursor-pointer hover:scale-105 transition-transform duration-300 bg-white dark:bg-gray-800"
+                  className="flex-shrink-0 w-80 sm:w-96 h-full flex flex-col overflow-hidden group cursor-pointer hover:scale-105 transition-transform duration-300 bg-white dark:bg-gray-800"
                 >
-                  <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
+                  <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0">
                     <img
                       src={recipe.thumbnailUrl}
                       alt={recipe.dishName}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
                   </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold text-sm sm:text-base line-clamp-2 mb-1">
+                  <CardContent className="p-4 flex-1 flex flex-col">
+                    <h3 className="font-semibold text-base sm:text-lg mb-2 line-clamp-2">
                       {recipe.dishName}
                     </h3>
-                    <p className="text-xs text-muted-foreground line-clamp-2">
+                    <p className="text-sm text-muted-foreground mb-3 flex-1 line-clamp-4">
                       {recipe.description}
                     </p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-xs bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-2 py-1 rounded">
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
                         {recipe.cuisineType}
-                      </span>
+                      </Badge>
                     </div>
+                    {recipe.tags && recipe.tags.length > 0 && (
+                      <div className="border-t pt-3 mt-auto">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Tag className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-xs font-medium text-muted-foreground">Tags</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {recipe.tags.slice(0, 6).map((tag, index) => (
+                            <Badge
+                              key={index}
+                              variant="outline"
+                              className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-700"
+                            >
+                              {tag}
+                            </Badge>
+                          ))}
+                          {recipe.tags.length > 6 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{recipe.tags.length - 6}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
@@ -300,67 +328,49 @@ export function LandingPage() {
         </section>
       )}
 
-      {/* CTA Section */}
+      {/* Self-Host Section */}
       <section className="py-16 sm:py-24 bg-gradient-to-r from-orange-500 to-amber-600 text-white">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Ready to Transform Your Recipe Collection?
+            Self-Host Your Own Instance
           </h2>
           <p className="text-xl mb-8 opacity-90">
-            Join thousands of food lovers organizing their favorite recipes
+            This is a self-hosted project. Deploy it yourself with Docker or Podman.
           </p>
           <Card className="max-w-md mx-auto border-2 border-white/20 bg-white/10 backdrop-blur">
-            <CardContent className="p-6">
-              {waitlistSuccess ? (
-                <div className="text-center">
-                  <CheckCircle2 className="w-12 h-12 text-white mx-auto mb-4" />
-                  <p className="text-lg font-semibold mb-2">You're on the list!</p>
-                  <p className="text-sm opacity-90">
-                    Position #{waitlistSuccess.position}
-                  </p>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex justify-center mb-4">
+                <div className="bg-white/20 p-4 rounded-xl">
+                  <Server className="w-12 h-12 text-white" />
                 </div>
-              ) : (
-                <Form {...waitlistForm}>
-                  <form onSubmit={waitlistForm.handleSubmit(handleJoinWaitlist)} className="space-y-3">
-                    {waitlistError && (
-                      <Alert variant="destructive" className="bg-red-500/20 border-red-500/50 text-white">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertDescription>{waitlistError}</AlertDescription>
-                      </Alert>
-                    )}
-                    <FormField
-                      control={waitlistForm.control}
-                      name="email"
-                      rules={{ required: 'Email is required' }}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Input
-                              type="email"
-                              placeholder="your@email.com"
-                              disabled={waitlistLoading}
-                              className="bg-white/90 text-gray-900 placeholder:text-gray-500"
-                              {...field}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <Button
-                      type="submit"
-                      disabled={waitlistLoading}
-                      className="w-full bg-white text-orange-600 hover:bg-gray-100"
-                      size="lg"
-                    >
-                      {waitlistLoading ? 'Joining...' : (
-                        <>
-                          Join Waitlist <ArrowRight className="w-4 h-4 ml-2" />
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </Form>
-              )}
+              </div>
+              <p className="text-base opacity-90 mb-4">
+                Clone the repository, set up your environment variables, and deploy with pre-built Docker images or Podman quadlets.
+              </p>
+              <div className="flex flex-col gap-3">
+                <a 
+                  href={GITHUB_URL} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                >
+                  <Button
+                    className="w-full bg-white text-orange-600 hover:bg-gray-100"
+                    size="lg"
+                  >
+                    <Github className="w-4 h-4 mr-2" />
+                    View on GitHub
+                  </Button>
+                </a>
+                <Link to="/login">
+                  <Button
+                    variant="outline"
+                    className="w-full border-white/30 text-white hover:bg-white/10"
+                    size="lg"
+                  >
+                    Already have an account? Login
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -369,7 +379,18 @@ export function LandingPage() {
       {/* Footer */}
       <footer className="py-8 border-t bg-white/50 dark:bg-gray-800/50">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© 2024 Reci. All rights reserved.</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <p>© 2024 Reci. All rights reserved.</p>
+            <a 
+              href={GITHUB_URL} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 hover:text-orange-600 transition-colors"
+            >
+              <Github className="w-4 h-4" />
+              <span>View on GitHub</span>
+            </a>
+          </div>
         </div>
       </footer>
     </div>

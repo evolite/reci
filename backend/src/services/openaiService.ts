@@ -1,10 +1,51 @@
 import OpenAI from 'openai';
 import { RecipeAnalysis, ShoppingListResponse } from '../models/Recipe';
 import { sanitizeInput } from '../utils/validation';
+import { prisma } from '../lib/prisma';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+// Cache for model setting to avoid database queries on every request
+let modelCache: string | null = null;
+let modelCacheTime: number = 0;
+const CACHE_TTL = 60000; // 1 minute cache
+
+async function getOpenAIModel(): Promise<string> {
+  const now = Date.now();
+  
+  // Return cached value if still valid
+  if (modelCache && (now - modelCacheTime) < CACHE_TTL) {
+    return modelCache;
+  }
+  
+  try {
+    const setting = await prisma.setting.findUnique({
+      where: { key: 'openai_model' },
+    });
+    
+    if (setting) {
+      modelCache = setting.value;
+      modelCacheTime = now;
+      return setting.value;
+    }
+  } catch (error) {
+    console.error('Error fetching OpenAI model from settings:', error);
+  }
+  
+  // Fallback to default
+  const defaultModel = 'gpt-5-mini';
+  modelCache = defaultModel;
+  modelCacheTime = now;
+  return defaultModel;
+}
+
+// Function to clear cache (call this when settings are updated)
+export function clearModelCache() {
+  modelCache = null;
+  modelCacheTime = 0;
+}
 
 export async function analyzeRecipe(
   title: string,
@@ -73,8 +114,9 @@ The enhancedDescription should describe the DISH itself - its characteristics, f
 Return only the JSON object, no markdown formatting, no code blocks.`;
 
   try {
+    const model = await getOpenAIModel();
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model,
       messages: [
         {
           role: 'system',
@@ -222,8 +264,9 @@ The enhancedDescription should describe the DISH itself - its characteristics, f
 Return only the JSON object, no markdown formatting, no code blocks.`;
 
   try {
+    const model = await getOpenAIModel();
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model,
       messages: [
         {
           role: 'system',
@@ -320,7 +363,7 @@ The suggestedTags array should contain 5-8 relevant tags based on what you see (
 Return only the JSON object, no markdown formatting, no code blocks.`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o', // GPT-4o supports vision
+      model, // Model is configurable via admin settings
       messages: [
         {
           role: 'system',
@@ -476,8 +519,9 @@ Remember: Keep it simple and generic - this is a shopping list, not a recipe. Re
 Return only the JSON object, no markdown formatting, no code blocks, no additional text.`;
 
   try {
+    const model = await getOpenAIModel();
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model,
       messages: [
         {
           role: 'system',

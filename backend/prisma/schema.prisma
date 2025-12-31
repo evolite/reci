@@ -96,3 +96,12 @@ model ShoppingCart {
   @@index([shareToken])
   @@map("shopping_carts")
 }
+
+model Setting {
+  key         String   @id
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+
+  @@map("settings")
+}
