@@ -42,6 +42,72 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
   return response.json();
 }
 
+// Helper function for simple POST requests without auth (register, login, etc.)
+async function postWithoutAuth<T>(url: string, body: unknown, errorMessage: string): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${url}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: errorMessage }));
+    throw new Error(error.error || errorMessage);
+  }
+
+  return response.json();
+}
+
+// Helper function for PUT requests without auth
+async function putWithoutAuth<T>(url: string, body: unknown, errorMessage: string): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${url}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: errorMessage }));
+    throw new Error(error.error || errorMessage);
+  }
+
+  return response.json();
+}
+
+// Helper function for GET requests without auth
+async function getWithoutAuth<T>(url: string, errorMessage: string): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${url}`);
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: errorMessage }));
+    throw new Error(error.error || errorMessage);
+  }
+
+  return response.json();
+}
+
+// Helper function for DELETE requests with auth that need custom error handling
+async function deleteWithAuth(url: string, errorMessage: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}${url}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+
+  if (response.status === 401) {
+    handle401Response();
+    throw new Error('Session expired. Please login again.');
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: errorMessage }));
+    throw new Error(error.error || errorMessage);
+  }
+}
+
 export interface Recipe {
   id: string;
   videoUrl: string;
@@ -77,37 +143,11 @@ export async function register(
   name?: string,
   inviteToken?: string
 ): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ email, password, name, inviteToken }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to register');
-  }
-
-  return response.json();
+  return postWithoutAuth<AuthResponse>('/api/auth/register', { email, password, name, inviteToken }, 'Failed to register');
 }
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ email, password }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to login');
-  }
-
-  return response.json();
+  return postWithoutAuth<AuthResponse>('/api/auth/login', { email, password }, 'Failed to login');
 }
 
 export async function logout(): Promise<void> {
@@ -134,98 +174,32 @@ export async function getCurrentUser(token?: string | null): Promise<{ user: Use
 }
 
 export async function verifyEmail(token: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/auth/verify-email`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ token }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to verify email');
-  }
+  await postWithoutAuth<void>('/api/auth/verify-email', { token }, 'Failed to verify email');
 }
 
 export async function forgotPassword(email: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ email }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to request password reset');
-  }
+  await postWithoutAuth<void>('/api/auth/forgot-password', { email }, 'Failed to request password reset');
 }
 
 export async function resetPassword(token: string, newPassword: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ token, newPassword }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to reset password');
-  }
+  await postWithoutAuth<void>('/api/auth/reset-password', { token, newPassword }, 'Failed to reset password');
 }
 
 export async function checkInvite(token: string): Promise<{ valid: boolean; email?: string; expiresAt?: Date }> {
-  const response = await fetch(`${API_BASE_URL}/api/auth/check-invite/${token}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Invalid invite token');
-  }
-
-  return response.json();
+  return getWithoutAuth<{ valid: boolean; email?: string; expiresAt?: Date }>(`/api/auth/check-invite/${token}`, 'Invalid invite token');
 }
 
 // Waitlist API functions
 export async function joinWaitlist(email: string): Promise<{ email: string; position: number; message: string }> {
-  const response = await fetch(`${API_BASE_URL}/api/waitlist`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ email }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to join waitlist');
-  }
-
-  return response.json();
+  return postWithoutAuth<{ email: string; position: number; message: string }>('/api/waitlist', { email }, 'Failed to join waitlist');
 }
 
 export async function getWaitlistPosition(email: string): Promise<{ email: string; position: number; total: number }> {
-  const response = await fetch(`${API_BASE_URL}/api/waitlist/position/${encodeURIComponent(email)}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to get waitlist position');
-  }
-
-  return response.json();
+  return getWithoutAuth<{ email: string; position: number; total: number }>(`/api/waitlist/position/${encodeURIComponent(email)}`, 'Failed to get waitlist position');
 }
 
 export async function getWaitlistStats(): Promise<{ total: number }> {
-  const response = await fetch(`${API_BASE_URL}/api/waitlist/stats`);
-
-  if (!response.ok) {
-    throw new Error('Failed to get waitlist statistics');
-  }
-
-  return response.json();
+  return getWithoutAuth<{ total: number }>('/api/waitlist/stats', 'Failed to get waitlist statistics');
 }
 
 // Invite API functions (admin only)
@@ -274,20 +248,7 @@ export async function getInvites(): Promise<{ invites: Invite[] }> {
 }
 
 export async function deleteInvite(inviteId: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/invites/${inviteId}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders(),
-  });
-
-  if (response.status === 401) {
-    handle401Response();
-    throw new Error('Session expired. Please login again.');
-  }
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to delete invite' }));
-    throw new Error(error.error || 'Failed to delete invite');
-  }
+  return deleteWithAuth(`/api/invites/${inviteId}`, 'Failed to delete invite');
 }
 
 export async function getInviteStats(): Promise<{ stats: InviteStats }> {
@@ -358,20 +319,7 @@ export async function updateRecipe(recipeId: string, updates: Partial<Recipe>): 
 }
 
 export async function deleteRecipe(recipeId: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/recipes/${recipeId}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders(),
-  });
-
-  if (response.status === 401) {
-    handle401Response();
-    throw new Error('Session expired. Please login again.');
-  }
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to delete recipe' }));
-    throw new Error(error.error || 'Failed to delete recipe');
-  }
+  return deleteWithAuth(`/api/recipes/${recipeId}`, 'Failed to delete recipe');
 }
 
 export async function rescrapeRecipe(recipeId: string): Promise<Recipe> {
@@ -476,46 +424,15 @@ export async function saveShoppingCart(cart: ShoppingCartRequest): Promise<Shopp
 }
 
 export async function deleteShoppingCart(): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/cart`, {
-    method: 'DELETE',
-    headers: getAuthHeaders(),
-  });
-
-  if (response.status === 401) {
-    handle401Response();
-    throw new Error('Session expired. Please login again.');
-  }
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to delete shopping cart' }));
-    throw new Error(error.error || 'Failed to delete shopping cart');
-  }
+  return deleteWithAuth('/api/cart', 'Failed to delete shopping cart');
 }
 
 export async function getSharedCart(shareToken: string): Promise<SharedCartResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/cart/shared/${shareToken}`);
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to fetch shared cart' }));
-    throw new Error(error.error || 'Failed to fetch shared cart');
-  }
-
-  return response.json();
+  return getWithoutAuth<SharedCartResponse>(`/api/cart/shared/${shareToken}`, 'Failed to fetch shared cart');
 }
 
 export async function updateSharedCart(shareToken: string, checkedItems: string[]): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/cart/shared/${shareToken}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ checkedItems }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to update shared cart' }));
-    throw new Error(error.error || 'Failed to update shared cart');
-  }
+  await putWithoutAuth<void>(`/api/cart/shared/${shareToken}`, { checkedItems }, 'Failed to update shared cart');
 }
 
 export async function shareShoppingCart(): Promise<ShareCartResponse> {
@@ -528,20 +445,7 @@ export async function shareShoppingCart(): Promise<ShareCartResponse> {
 }
 
 export async function unshareShoppingCart(): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/cart/share`, {
-    method: 'DELETE',
-    headers: getAuthHeaders(),
-  });
-
-  if (response.status === 401) {
-    handle401Response();
-    throw new Error('Session expired. Please login again.');
-  }
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to unshare shopping cart' }));
-    throw new Error(error.error || 'Failed to unshare shopping cart');
-  }
+  return deleteWithAuth('/api/cart/share', 'Failed to unshare shopping cart');
 }
 
 // Settings API
