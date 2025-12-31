@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ChefHat, Sparkles, Search, Plus, ArrowRight, Github, Server, Tag } from 'lucide-react';
+import { ChefHat, Sparkles, Search, Plus, ArrowRight, Github, Tag } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface Recipe {
@@ -327,54 +327,6 @@ export function LandingPage() {
           </div>
         </section>
       )}
-
-      {/* Self-Host Section */}
-      <section className="py-16 sm:py-24 bg-gradient-to-r from-orange-500 to-amber-600 text-white">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Self-Host Your Own Instance
-          </h2>
-          <p className="text-xl mb-8 opacity-90">
-            This is a self-hosted project. Deploy it yourself with Docker or Podman.
-          </p>
-          <Card className="max-w-md mx-auto border-2 border-white/20 bg-white/10 backdrop-blur">
-            <CardContent className="p-6 space-y-4">
-              <div className="flex justify-center mb-4">
-                <div className="bg-white/20 p-4 rounded-xl">
-                  <Server className="w-12 h-12 text-white" />
-                </div>
-              </div>
-              <p className="text-base opacity-90 mb-4">
-                Clone the repository, set up your environment variables, and deploy with pre-built Docker images or Podman quadlets.
-              </p>
-              <div className="flex flex-col gap-3">
-                <a 
-                  href={GITHUB_URL} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                >
-                  <Button
-                    className="w-full bg-white text-orange-600 hover:bg-gray-100"
-                    size="lg"
-                  >
-                    <Github className="w-4 h-4 mr-2" />
-                    View on GitHub
-                  </Button>
-                </a>
-                <Link to="/login">
-                  <Button
-                    variant="outline"
-                    className="w-full border-white/30 text-white hover:bg-white/10"
-                    size="lg"
-                  >
-                    Already have an account? Login
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
 
       {/* Footer */}
       <footer className="py-8 border-t bg-white/50 dark:bg-gray-800/50">

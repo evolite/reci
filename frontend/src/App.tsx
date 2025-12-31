@@ -9,8 +9,7 @@ import { LoginPage } from './pages/LoginPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
-import { AdminInvitesPage } from './pages/AdminInvitesPage';
-import { AdminSettingsPage } from './pages/AdminSettingsPage';
+import { AdminPanelPage } from './pages/AdminPanelPage';
 import { LandingPage } from './pages/LandingPage';
 import { SharedCartPage } from './pages/SharedCartPage';
 
@@ -30,18 +29,10 @@ function App() {
             <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/cart/shared/:shareToken" element={<SharedCartPage />} />
             <Route
-              path="/admin/invites"
-              element={
-                <AdminRoute>
-                  <AdminInvitesPage />
-                </AdminRoute>
-              }
-            />
-            <Route
               path="/admin/settings"
               element={
                 <AdminRoute>
-                  <AdminSettingsPage />
+                  <AdminPanelPage />
                 </AdminRoute>
               }
             />

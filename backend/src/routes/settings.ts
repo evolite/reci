@@ -1,11 +1,12 @@
 import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma';
-import { AuthRequest, requireAdmin } from '../middleware/auth';
+import { AuthRequest, authenticate, requireAdmin } from '../middleware/auth';
 import { clearModelCache } from '../services/openaiService';
 
 const router = Router();
 
-// All routes require admin authentication
+// All routes require authentication and admin access
+router.use(authenticate);
 router.use(requireAdmin);
 
 // GET /api/settings - Get all settings

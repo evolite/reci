@@ -29,7 +29,7 @@ Most recipe managers expect you to manually type in ingredients, categorize ever
 
 ## Tech Stack
 
-Built with TypeScript, React, and Vite. Uses shadcn/ui components for the UI, Prisma for the database, and OpenAI's API for recipe analysis. Backend is Express with PostgreSQL. Everything runs in Podman containers.
+Built with TypeScript, React, and Vite. Uses shadcn/ui components for the UI, Prisma for the database, and OpenAI's API for recipe analysis. Backend is Express with PostgreSQL. Frontend is built with Vite and served via nginx as a reverse proxy that forwards API requests to the backend. Everything runs in Podman containers.
 
 ## Deployment
 

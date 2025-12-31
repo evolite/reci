@@ -362,6 +362,7 @@ The instructions should contain step-by-step cooking instructions based on what 
 The suggestedTags array should contain 5-8 relevant tags based on what you see (e.g., "easy", "quick", "vegetarian", "spicy", "dessert", "breakfast", "30-minutes", "one-pot", "gluten-free", etc.).
 Return only the JSON object, no markdown formatting, no code blocks.`;
 
+    const model = await getOpenAIModel();
     const completion = await openai.chat.completions.create({
       model, // Model is configurable via admin settings
       messages: [

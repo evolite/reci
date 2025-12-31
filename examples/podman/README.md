@@ -58,5 +58,7 @@ systemctl --user enable reci-frontend.service
 
 - Ports:
   - Backend: 4000
-  - Frontend: 4001
+  - Frontend: 4001 (nginx reverse proxy)
   - Database: internal only (not exposed)
+
+- The frontend container uses nginx to serve the React app and proxy API requests to the backend. The nginx configuration is included in the frontend image (`frontend/nginx.conf`) and automatically proxies `/api/*` requests to `reci-backend:4000`. If you need to customize the nginx configuration, modify `frontend/nginx.conf` and rebuild the frontend image.
