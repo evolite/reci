@@ -1,6 +1,6 @@
 import * as cheerio from 'cheerio';
 import { validateVideoUrl } from '../utils/validation';
-import { findCommentsInObject, extractJsonByBraceCounting } from './youtubeServiceHelpers';
+import { extractYouTubeCommentsFromHtml } from './youtubeServiceHelpers';
 
 export interface VideoMetadata {
   title: string;
@@ -160,44 +160,6 @@ function extractMetadataFromContent(html: string, $: ReturnType<typeof cheerio.l
  * Helper function to extract JSON string using brace counting
  */
 
-/**
- * Helper function to extract and process YouTube comments from JSON data
- */
-function processYouTubeComments(ytInitialData: any): string[] {
-  const comments = findCommentsInObject(ytInitialData);
-  return comments
-    .filter((c, i, arr) => arr.indexOf(c) === i) // Remove duplicates
-    .sort((a, b) => b.length - a.length)
-    .slice(0, 5);
-}
-
-/**
- * Helper function to extract YouTube comments from HTML
- */
-function extractYouTubeComments(html: string): string[] {
-  // Try brace counting first
-  const startMarker = 'var ytInitialData = ({';
-  let jsonStr = extractJsonByBraceCounting(html, startMarker);
-  
-  // Fallback to regex if brace counting fails
-  if (!jsonStr) {
-    const ytInitialDataRegex = /var ytInitialData = (\{[^;]{0,1000000}\});/s;
-    const ytInitialDataMatch = ytInitialDataRegex.exec(html);
-    if (ytInitialDataMatch) {
-      jsonStr = ytInitialDataMatch[1];
-    }
-  }
-  
-  if (!jsonStr) return [];
-  
-  try {
-    const ytInitialData = JSON.parse(jsonStr);
-    return processYouTubeComments(ytInitialData);
-  } catch (parseError) {
-    console.warn('Failed to parse ytInitialData:', parseError);
-    return [];
-  }
-}
 
 /**
  * Attempts to extract comments or additional text content (platform-specific)
@@ -206,7 +168,7 @@ function extractYouTubeComments(html: string): string[] {
 function extractCommentsFromHtml(html: string, platform: string | null): string[] {
   if (platform === 'youtube') {
     try {
-      return extractYouTubeComments(html);
+      return extractYouTubeCommentsFromHtml(html);
     } catch (commentError) {
       console.warn('Failed to extract comments:', commentError);
       return [];

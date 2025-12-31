@@ -89,3 +89,42 @@ export function findCommentsInObject(obj: any, depth = 0): string[] {
   
   return [];
 }
+
+/**
+ * Helper function to extract and process YouTube comments from JSON data
+ */
+export function processYouTubeComments(ytInitialData: any): string[] {
+  const comments = findCommentsInObject(ytInitialData);
+  return comments
+    .filter((c, i, arr) => arr.indexOf(c) === i) // Remove duplicates
+    .sort((a, b) => b.length - a.length)
+    .slice(0, 5);
+}
+
+/**
+ * Helper function to extract YouTube comments from HTML
+ */
+export function extractYouTubeCommentsFromHtml(html: string): string[] {
+  // Try brace counting first
+  const startMarker = 'var ytInitialData = ({';
+  let jsonStr = extractJsonByBraceCounting(html, startMarker);
+  
+  // Fallback to regex if brace counting fails
+  if (!jsonStr) {
+    const ytInitialDataRegex = /var ytInitialData = (\{[^;]{0,1000000}\});/s;
+    const ytInitialDataMatch = ytInitialDataRegex.exec(html);
+    if (ytInitialDataMatch) {
+      jsonStr = ytInitialDataMatch[1];
+    }
+  }
+  
+  if (!jsonStr) return [];
+  
+  try {
+    const ytInitialData = JSON.parse(jsonStr);
+    return processYouTubeComments(ytInitialData);
+  } catch (parseError) {
+    console.warn('Failed to parse ytInitialData:', parseError);
+    return [];
+  }
+}
