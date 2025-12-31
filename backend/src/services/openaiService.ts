@@ -47,6 +47,85 @@ export function clearModelCache() {
   modelCacheTime = 0;
 }
 
+// Helper function to check if OpenAI API key is set
+function ensureOpenAIKey(): void {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY is not set');
+  }
+}
+
+// Helper function to create OpenAI completion with text message
+async function createOpenAICompletion(
+  systemMessage: string,
+  userMessage: string,
+  temperature: number = 0.3
+): Promise<string> {
+  const model = await getOpenAIModel();
+  const completion = await openai.chat.completions.create({
+    model,
+    messages: [
+      {
+        role: 'system',
+        content: systemMessage,
+      },
+      {
+        role: 'user',
+        content: userMessage,
+      },
+    ],
+    temperature,
+  });
+
+  const content = completion.choices[0]?.message?.content;
+  if (!content) {
+    throw new Error('No response from OpenAI');
+  }
+
+  return content;
+}
+
+// Helper function to create OpenAI completion with vision (text + image)
+async function createOpenAIVisionCompletion(
+  systemMessage: string,
+  textPrompt: string,
+  imageUrl: string,
+  temperature: number = 0.3
+): Promise<string> {
+  const model = await getOpenAIModel();
+  const completion = await openai.chat.completions.create({
+    model,
+    messages: [
+      {
+        role: 'system',
+        content: systemMessage,
+      },
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: textPrompt,
+          },
+          {
+            type: 'image_url',
+            image_url: {
+              url: imageUrl,
+            },
+          },
+        ],
+      },
+    ],
+    temperature,
+  });
+
+  const content = completion.choices[0]?.message?.content;
+  if (!content) {
+    throw new Error('No response from OpenAI');
+  }
+
+  return content;
+}
+
 function buildCommentsText(comments: string[]): string {
   if (comments.length === 0) {
     return '';
@@ -185,9 +264,7 @@ export async function analyzeRecipe(
   description: string,
   comments?: string[]
 ): Promise<RecipeAnalysis> {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY is not set');
-  }
+  ensureOpenAIKey();
 
   // Sanitize inputs to prevent prompt injection
   const sanitizedTitle = sanitizeInput(title, 500);
@@ -200,26 +277,8 @@ export async function analyzeRecipe(
   const prompt = buildRecipePrompt(sanitizedTitle, sanitizedDescription, commentsText);
 
   try {
-    const model = await getOpenAIModel();
-    const completion = await openai.chat.completions.create({
-      model,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a helpful assistant that extracts recipe information from video titles and descriptions. You MUST always return a valid JSON object with the required structure (dishName, cuisineType, mainIngredients, etc.), even if the video information is minimal. Never return an error object - always provide your best guess based on available information. Always return valid JSON only, no markdown, no code blocks, just the JSON object.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.3,
-    });
-
-    const content = completion.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error('No response from OpenAI');
-    }
+    const systemMessage = 'You are a helpful assistant that extracts recipe information from video titles and descriptions. You MUST always return a valid JSON object with the required structure (dishName, cuisineType, mainIngredients, etc.), even if the video information is minimal. Never return an error object - always provide your best guess based on available information. Always return valid JSON only, no markdown, no code blocks, just the JSON object.';
+    const content = await createOpenAICompletion(systemMessage, prompt, 0.3);
 
     const cleanedContent = cleanOpenAIResponse(content);
     let analysis = parseAndValidateResponse(cleanedContent, sanitizedTitle, sanitizedDescription);
@@ -235,9 +294,7 @@ export async function analyzeRecipe(
 }
 
 export async function analyzeRecipeFromText(recipeText: string): Promise<RecipeAnalysis> {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY is not set');
-  }
+  ensureOpenAIKey();
 
   // Sanitize input to prevent prompt injection
   const sanitizedRecipeText = sanitizeInput(recipeText, 50000); // Max 50KB for recipe text
@@ -298,34 +355,11 @@ The enhancedDescription should describe the DISH itself - its characteristics, f
 Return only the JSON object, no markdown formatting, no code blocks.`;
 
   try {
-    const model = await getOpenAIModel();
-    const completion = await openai.chat.completions.create({
-      model,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a helpful assistant that extracts recipe information from recipe text. Always return valid JSON only, no markdown, no code blocks, just the JSON object.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.3,
-    });
-
-    const content = completion.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error('No response from OpenAI');
-    }
+    const systemMessage = 'You are a helpful assistant that extracts recipe information from recipe text. Always return valid JSON only, no markdown, no code blocks, just the JSON object.';
+    const content = await createOpenAICompletion(systemMessage, prompt, 0.3);
 
     // Clean the content - remove markdown code blocks if present
-    let cleanedContent = content.trim();
-    if (cleanedContent.startsWith('```json')) {
-      cleanedContent = cleanedContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-    } else if (cleanedContent.startsWith('```')) {
-      cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
-    }
+    const cleanedContent = cleanOpenAIResponse(content);
 
     // Parse the JSON response
     let analysis: RecipeAnalysis;
@@ -357,9 +391,7 @@ Return only the JSON object, no markdown formatting, no code blocks.`;
 }
 
 export async function analyzeRecipeWithVision(thumbnailUrl: string, title: string, description: string): Promise<RecipeAnalysis> {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY is not set');
-  }
+  ensureOpenAIKey();
 
   try {
     // Fetch the thumbnail image
@@ -401,45 +433,12 @@ The instructions should contain step-by-step cooking instructions based on what 
 The suggestedTags array should contain 5-8 relevant tags based on what you see (e.g., "easy", "quick", "vegetarian", "spicy", "dessert", "breakfast", "30-minutes", "one-pot", "gluten-free", etc.).
 Return only the JSON object, no markdown formatting, no code blocks.`;
 
-    const model = await getOpenAIModel();
-    const completion = await openai.chat.completions.create({
-      model, // Model is configurable via admin settings
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a helpful assistant that analyzes recipe images and extracts recipe information. Always return valid JSON only, no markdown, no code blocks, just the JSON object.',
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: prompt,
-            },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:${mimeType};base64,${base64Image}`,
-              },
-            },
-          ],
-        },
-      ],
-      temperature: 0.3,
-    });
-
-    const content = completion.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error('No response from OpenAI');
-    }
+    const systemMessage = 'You are a helpful assistant that analyzes recipe images and extracts recipe information. Always return valid JSON only, no markdown, no code blocks, just the JSON object.';
+    const imageUrl = `data:${mimeType};base64,${base64Image}`;
+    const content = await createOpenAIVisionCompletion(systemMessage, prompt, imageUrl, 0.3);
 
     // Clean the content - remove markdown code blocks if present
-    let cleanedContent = content.trim();
-    if (cleanedContent.startsWith('```json')) {
-      cleanedContent = cleanedContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-    } else if (cleanedContent.startsWith('```')) {
-      cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
-    }
+    const cleanedContent = cleanOpenAIResponse(content);
 
     // Parse the JSON response
     let analysis: RecipeAnalysis;
@@ -477,9 +476,7 @@ export interface RecipeForShoppingList {
 }
 
 export async function generateShoppingList(recipes: RecipeForShoppingList[]): Promise<ShoppingListResponse> {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY is not set');
-  }
+  ensureOpenAIKey();
 
   // Separate recipes with and without ingredients
   const recipesWithIngredients = recipes.filter(r => r.ingredients && r.ingredients.length > 0);
@@ -564,34 +561,11 @@ Remember: Keep it simple and generic - this is a shopping list, not a recipe. Re
 Return only the JSON object, no markdown formatting, no code blocks, no additional text.`;
 
   try {
-    const model = await getOpenAIModel();
-    const completion = await openai.chat.completions.create({
-      model,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a helpful assistant that organizes shopping lists by supermarket sections. Always return valid JSON only, no markdown, no code blocks, just the JSON object.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.2,
-    });
-
-    const content = completion.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error('No response from OpenAI');
-    }
+    const systemMessage = 'You are a helpful assistant that organizes shopping lists by supermarket sections. Always return valid JSON only, no markdown, no code blocks, just the JSON object.';
+    const content = await createOpenAICompletion(systemMessage, prompt, 0.2);
 
     // Clean the content - remove markdown code blocks if present
-    let cleanedContent = content.trim();
-    if (cleanedContent.startsWith('```json')) {
-      cleanedContent = cleanedContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-    } else if (cleanedContent.startsWith('```')) {
-      cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
-    }
+    const cleanedContent = cleanOpenAIResponse(content);
 
     // Parse the JSON response
     let shoppingList: { sections: Array<{ name: string; ingredients: string[] }> };
