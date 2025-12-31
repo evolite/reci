@@ -7,6 +7,7 @@ const Table = React.forwardRef<
   React.HTMLAttributes<HTMLTableElement>
 >(({ className, ...props }, ref) => (
   <div className="relative w-full overflow-auto">
+    {/* NOSONAR typescript:S5256 - This is a component library component. Headers are provided by consumers using TableHeader and TableHead components. */}
     <table
       ref={ref}
       className={cn("w-full caption-bottom text-sm", className)}
