@@ -1,28 +1,37 @@
-import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ChefHat, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+
+interface LoginFormValues {
+  email: string;
+  password: string;
+}
 
 export function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const form = useForm<LoginFormValues>({
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (values: LoginFormValues) => {
     setError('');
     setLoading(true);
 
     try {
-      await login(email, password);
+      await login(values.email, values.password);
       navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to login');
@@ -44,54 +53,70 @@ export function LoginPage() {
           <CardDescription>Login to your Reci account</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                required
-                disabled={loading}
-                autoComplete="email"
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleLogin)} className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              <FormField
+                control={form.control}
+                name="email"
+                rules={{ required: 'Email is required' }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="your@email.com"
+                        disabled={loading}
+                        autoComplete="email"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-                disabled={loading}
-                autoComplete="current-password"
+              <FormField
+                control={form.control}
+                name="password"
+                rules={{ required: 'Password is required' }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="Enter your password"
+                        disabled={loading}
+                        autoComplete="current-password"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Logging in...' : 'Login'}
-            </Button>
-            <div className="text-center space-y-2">
-              <Link to="/forgot-password" className="text-sm text-muted-foreground hover:underline">
-                Forgot password?
-              </Link>
-              <div className="text-sm text-muted-foreground">
-                Don't have an account?{' '}
-                <Link to="/signup" className="hover:underline text-orange-600">
-                  Sign up
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Logging in...' : 'Login'}
+              </Button>
+              <div className="text-center space-y-2">
+                <Link to="/forgot-password" className="text-sm text-muted-foreground hover:underline">
+                  Forgot password?
                 </Link>
+                <div className="text-sm text-muted-foreground">
+                  Don't have an account?{' '}
+                  <Link to="/signup" className="hover:underline text-orange-600">
+                    Sign up
+                  </Link>
+                </div>
               </div>
-            </div>
-          </form>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </div>

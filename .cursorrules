@@ -1,0 +1,8 @@
+---
+description: Always use shadcn components
+---
+
+# Component Guidelines
+
+## Always Use shadcn Components
+Always use shadcn/ui components from `@/components/ui` instead of building custom components. If you find previously built custom components that could be replaced with shadcn components, replace them with the appropriate shadcn component.

@@ -11,6 +11,7 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { AdminInvitesPage } from './pages/AdminInvitesPage';
 import { LandingPage } from './pages/LandingPage';
+import { SharedCartPage } from './pages/SharedCartPage';
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/cart/shared/:shareToken" element={<SharedCartPage />} />
             <Route
               path="/admin/invites"
               element={

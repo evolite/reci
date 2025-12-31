@@ -1,17 +1,18 @@
 import { Router, Request, Response } from 'express';
-import { extractVideoId, getVideoMetadata } from '../services/youtubeService';
-import { analyzeRecipe, analyzeRecipeWithVision, analyzeRecipeFromText } from '../services/openaiService';
-import { CreateRecipeInput } from '../models/Recipe';
+import { getVideoMetadata } from '../services/videoService';
+import { analyzeRecipe, analyzeRecipeWithVision, analyzeRecipeFromText, generateShoppingList } from '../services/openaiService';
+import { CreateRecipeInput, ShoppingListRequest } from '../models/Recipe';
 import { prisma } from '../lib/prisma';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { analyzeAndUpdateRecipe, prepareUpdateData } from './recipeHelpers';
+import { validateVideoUrl } from '../utils/validation';
 
 const router = Router();
 
 // GET /api/recipes/public - Get public recipes for landing page (no auth required)
 router.get('/public', async (req: Request, res: Response) => {
   try {
-    const recipes = await prisma.recipe.findMany({
+      const recipes = await prisma.recipe.findMany({
       take: 12, // Limit to 12 recipes for showcase
       orderBy: { createdAt: 'desc' },
       select: {
@@ -19,7 +20,7 @@ router.get('/public', async (req: Request, res: Response) => {
         dishName: true,
         description: true,
         thumbnailUrl: true,
-        youtubeUrl: true,
+        videoUrl: true,
         cuisineType: true,
         tags: true,
         createdAt: true,
@@ -38,29 +39,29 @@ router.use(authenticate);
 // POST /api/recipes - Add new recipe
 router.post('/', async (req: AuthRequest, res: Response) => {
   try {
-    const { youtubeUrl }: CreateRecipeInput = req.body;
+    const { videoUrl }: CreateRecipeInput = req.body;
 
-    if (!youtubeUrl) {
-      return res.status(400).json({ error: 'youtubeUrl is required' });
+    if (!videoUrl) {
+      return res.status(400).json({ error: 'URL is required' });
     }
 
-    // Extract video ID
-    const videoId = extractVideoId(youtubeUrl);
-    if (!videoId) {
-      return res.status(400).json({ error: 'Invalid YouTube URL' });
+    // Validate URL
+    const validation = validateVideoUrl(videoUrl);
+    if (!validation.valid) {
+      return res.status(400).json({ error: validation.error || 'Invalid URL' });
     }
 
     // Check if recipe already exists
     const existing = await prisma.recipe.findUnique({
-      where: { youtubeUrl },
+      where: { videoUrl },
     });
 
     if (existing) {
       return res.status(409).json({ error: 'Recipe already exists', recipe: existing });
     }
 
-    // Fetch YouTube metadata (including comments)
-    const metadata = await getVideoMetadata(videoId);
+    // Fetch video metadata (including comments)
+    const metadata = await getVideoMetadata(videoUrl);
 
     // Analyze with OpenAI text analysis (including comments for better context)
     const textAnalysis = await analyzeRecipe(
@@ -74,7 +75,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     try {
       visionAnalysis = await analyzeRecipeWithVision(
         metadata.thumbnailUrl,
-        metadata.title, // Pass YouTube title for context
+        metadata.title, // Pass video title for context
         metadata.description
       );
     } catch (visionError) {
@@ -101,7 +102,8 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     // Create recipe in database with OpenAI-enhanced data
     const recipe = await prisma.recipe.create({
       data: {
-        youtubeUrl,
+        videoUrl,
+        videoPlatform: metadata.platform || null,
         thumbnailUrl: metadata.thumbnailUrl,
         description: finalAnalysis.enhancedDescription || metadata.description,
         dishName: finalAnalysis.dishName,
@@ -231,6 +233,19 @@ router.patch('/:id/tags', async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'tags must be an array' });
     }
 
+    // Check recipe exists and user has permission
+    const existing = await prisma.recipe.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Recipe not found' });
+    }
+
+    if (existing.userId !== req.userId && !req.user?.isAdmin) {
+      return res.status(403).json({ error: 'Not authorized to update this recipe' });
+    }
+
     const recipe = await prisma.recipe.update({
       where: { id },
       data: {
@@ -254,6 +269,77 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { description, dishName, cuisineType, ingredients, instructions, tags } = req.body;
 
+    // Validate input fields
+    if (description !== undefined) {
+      if (typeof description !== 'string') {
+        return res.status(400).json({ error: 'description must be a string' });
+      }
+      if (description.length > 10000) {
+        return res.status(400).json({ error: 'description must be 10000 characters or less' });
+      }
+    }
+
+    if (dishName !== undefined) {
+      if (typeof dishName !== 'string') {
+        return res.status(400).json({ error: 'dishName must be a string' });
+      }
+      if (dishName.length === 0) {
+        return res.status(400).json({ error: 'dishName cannot be empty' });
+      }
+      if (dishName.length > 200) {
+        return res.status(400).json({ error: 'dishName must be 200 characters or less' });
+      }
+    }
+
+    if (cuisineType !== undefined) {
+      if (typeof cuisineType !== 'string') {
+        return res.status(400).json({ error: 'cuisineType must be a string' });
+      }
+      if (cuisineType.length > 100) {
+        return res.status(400).json({ error: 'cuisineType must be 100 characters or less' });
+      }
+    }
+
+    if (ingredients !== undefined) {
+      if (!Array.isArray(ingredients)) {
+        return res.status(400).json({ error: 'ingredients must be an array' });
+      }
+      if (ingredients.length > 500) {
+        return res.status(400).json({ error: 'ingredients array must have 500 items or less' });
+      }
+      for (const ingredient of ingredients) {
+        if (typeof ingredient !== 'string') {
+          return res.status(400).json({ error: 'All ingredients must be strings' });
+        }
+      }
+    }
+
+    if (instructions !== undefined && instructions !== null) {
+      if (typeof instructions !== 'string') {
+        return res.status(400).json({ error: 'instructions must be a string or null' });
+      }
+      if (instructions.length > 50000) {
+        return res.status(400).json({ error: 'instructions must be 50000 characters or less' });
+      }
+    }
+
+    if (tags !== undefined) {
+      if (!Array.isArray(tags)) {
+        return res.status(400).json({ error: 'tags must be an array' });
+      }
+      if (tags.length > 50) {
+        return res.status(400).json({ error: 'tags array must have 50 items or less' });
+      }
+      for (const tag of tags) {
+        if (typeof tag !== 'string') {
+          return res.status(400).json({ error: 'All tags must be strings' });
+        }
+        if (tag.length > 50) {
+          return res.status(400).json({ error: 'Each tag must be 50 characters or less' });
+        }
+      }
+    }
+
     // Get existing recipe to check if instructions changed
     const existing = await prisma.recipe.findUnique({
       where: { id },
@@ -261,6 +347,11 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
 
     if (!existing) {
       return res.status(404).json({ error: 'Recipe not found' });
+    }
+
+    // Check authorization - users can only modify their own recipes, admins can modify any
+    if (existing.userId !== req.userId && !req.user?.isAdmin) {
+      return res.status(403).json({ error: 'Not authorized to update this recipe' });
     }
 
     // Prepare update data from request body
@@ -334,7 +425,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// POST /api/recipes/:id/rescrape - Re-scrape YouTube data and re-analyze
+// POST /api/recipes/:id/rescrape - Re-scrape video data and re-analyze
 router.post('/:id/rescrape', async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -348,14 +439,19 @@ router.post('/:id/rescrape', async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Recipe not found' });
     }
 
-    // Extract video ID
-    const videoId = extractVideoId(existing.youtubeUrl);
-    if (!videoId) {
-      return res.status(400).json({ error: 'Invalid YouTube URL' });
+    // Check authorization
+    if (existing.userId !== req.userId && !req.user?.isAdmin) {
+      return res.status(403).json({ error: 'Not authorized to rescrape this recipe' });
     }
 
-    // Fetch YouTube metadata (including comments)
-    const metadata = await getVideoMetadata(videoId);
+    // Validate URL
+    const validation = validateVideoUrl(existing.videoUrl);
+    if (!validation.valid) {
+      return res.status(400).json({ error: validation.error || 'Invalid URL' });
+    }
+
+    // Fetch metadata (including comments)
+    const metadata = await getVideoMetadata(existing.videoUrl);
 
     // Analyze with OpenAI (including comments for better context)
     const analysis = await analyzeRecipe(
@@ -373,6 +469,7 @@ router.post('/:id/rescrape', async (req: AuthRequest, res: Response) => {
     const recipe = await prisma.recipe.update({
       where: { id },
       data: {
+        videoPlatform: metadata.platform || existing.videoPlatform,
         thumbnailUrl: metadata.thumbnailUrl,
         description: analysis.enhancedDescription || metadata.description,
         dishName: analysis.dishName,
@@ -394,7 +491,7 @@ router.post('/:id/rescrape', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// POST /api/recipes/:id/rescrape-and-analyze - Re-scrape YouTube data and analyze with both text and vision
+// POST /api/recipes/:id/rescrape-and-analyze - Re-scrape video data and analyze with both text and vision
 router.post('/:id/rescrape-and-analyze', async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -408,14 +505,19 @@ router.post('/:id/rescrape-and-analyze', async (req: AuthRequest, res: Response)
       return res.status(404).json({ error: 'Recipe not found' });
     }
 
-    // Extract video ID
-    const videoId = extractVideoId(existing.youtubeUrl);
-    if (!videoId) {
-      return res.status(400).json({ error: 'Invalid YouTube URL' });
+    // Check authorization
+    if (existing.userId !== req.userId && !req.user?.isAdmin) {
+      return res.status(403).json({ error: 'Not authorized to rescrape this recipe' });
     }
 
-    // Fetch YouTube metadata (including comments)
-    const metadata = await getVideoMetadata(videoId);
+    // Validate URL
+    const validation = validateVideoUrl(existing.videoUrl);
+    if (!validation.valid) {
+      return res.status(400).json({ error: validation.error || 'Invalid URL' });
+    }
+
+    // Fetch metadata (including comments)
+    const metadata = await getVideoMetadata(existing.videoUrl);
 
     // Analyze with OpenAI text analysis (including comments for better context)
     const textAnalysis = await analyzeRecipe(
@@ -462,6 +564,7 @@ router.post('/:id/rescrape-and-analyze', async (req: AuthRequest, res: Response)
     const recipe = await prisma.recipe.update({
       where: { id },
       data: {
+        videoPlatform: metadata.platform || existing.videoPlatform,
         thumbnailUrl: metadata.thumbnailUrl,
         description: finalAnalysis.enhancedDescription || metadata.description,
         dishName: finalAnalysis.dishName,
@@ -495,6 +598,11 @@ router.post('/:id/analyze-vision', async (req: AuthRequest, res: Response) => {
 
     if (!existing) {
       return res.status(404).json({ error: 'Recipe not found' });
+    }
+
+    // Check authorization
+    if (existing.userId !== req.userId && !req.user?.isAdmin) {
+      return res.status(403).json({ error: 'Not authorized to analyze this recipe' });
     }
 
     // Analyze thumbnail with GPT-Vision
@@ -538,6 +646,20 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
+    // Check recipe exists and user has permission
+    const recipe = await prisma.recipe.findUnique({
+      where: { id },
+    });
+
+    if (!recipe) {
+      return res.status(404).json({ error: 'Recipe not found' });
+    }
+
+    // Check authorization - users can only delete their own recipes, admins can delete any
+    if (recipe.userId !== req.userId && !req.user?.isAdmin) {
+      return res.status(403).json({ error: 'Not authorized to delete this recipe' });
+    }
+
     await prisma.recipe.delete({
       where: { id },
     });
@@ -549,6 +671,52 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Recipe not found' });
     }
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/recipes/shopping-list - Generate shopping list from multiple recipes
+router.post('/shopping-list', async (req: AuthRequest, res: Response) => {
+  try {
+    const { recipeIds }: ShoppingListRequest = req.body;
+
+    if (!Array.isArray(recipeIds) || recipeIds.length === 0) {
+      return res.status(400).json({ error: 'recipeIds must be a non-empty array' });
+    }
+
+    // Fetch all selected recipes
+    const recipes = await prisma.recipe.findMany({
+      where: {
+        id: { in: recipeIds },
+      },
+      select: {
+        id: true,
+        dishName: true,
+        ingredients: true,
+      },
+    });
+
+    if (recipes.length === 0) {
+      return res.status(404).json({ error: 'No recipes found with the provided IDs' });
+    }
+
+    // Prepare recipes for shopping list generation
+    const recipesForShoppingList = recipes.map(recipe => ({
+      id: recipe.id,
+      dishName: recipe.dishName,
+      ingredients: recipe.ingredients || [],
+    }));
+
+    // Generate shopping list using OpenAI
+    const shoppingList = await generateShoppingList(recipesForShoppingList);
+
+    res.json(shoppingList);
+  } catch (error) {
+    console.error('Error generating shopping list:', error);
+    if (error instanceof Error) {
+      res.status(500).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Internal server error' });
+    }
   }
 });
 

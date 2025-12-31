@@ -1,32 +1,55 @@
 import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ChefHat, AlertCircle } from 'lucide-react';
+
+interface InviteFormValues {
+  inviteToken: string;
+}
+
+interface RegisterFormValues {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
 
 export function SignupPage() {
   const [searchParams] = useSearchParams();
   const [step, setStep] = useState<'invite' | 'register'>('invite');
-  const [inviteToken, setInviteToken] = useState('');
-  const [email, setEmail] = useState('');
   const [emailFromInvite, setEmailFromInvite] = useState(false);
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register, checkInvite } = useAuth();
   const navigate = useNavigate();
+  
+  const inviteForm = useForm<InviteFormValues>({
+    defaultValues: {
+      inviteToken: '',
+    },
+  });
+  
+  const registerForm = useForm<RegisterFormValues>({
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+    },
+  });
 
   // Check if token is in URL query params
   useEffect(() => {
     const tokenFromUrl = searchParams.get('token');
     if (tokenFromUrl) {
-      setInviteToken(tokenFromUrl);
+      inviteForm.setValue('inviteToken', tokenFromUrl);
       // Automatically validate and proceed if token is in URL
       handleTokenFromUrl(tokenFromUrl);
     }
@@ -48,7 +71,7 @@ export function SignupPage() {
       if (result.valid) {
         setStep('register');
         if (result.email) {
-          setEmail(result.email);
+          registerForm.setValue('email', result.email);
           setEmailFromInvite(true);
         }
       } else {
@@ -61,24 +84,23 @@ export function SignupPage() {
     }
   };
 
-  const handleCheckInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCheckInvite = async (values: InviteFormValues) => {
     setError('');
     setLoading(true);
 
     try {
       // If no invite token provided, try to proceed (might be first user)
-      if (!inviteToken.trim()) {
+      if (!values.inviteToken.trim()) {
         setStep('register');
         setLoading(false);
         return;
       }
 
-      const result = await checkInvite(inviteToken);
+      const result = await checkInvite(values.inviteToken);
       if (result.valid) {
         setStep('register');
         if (result.email) {
-          setEmail(result.email);
+          registerForm.setValue('email', result.email);
           setEmailFromInvite(true);
         }
       } else {
@@ -86,7 +108,7 @@ export function SignupPage() {
       }
     } catch (err) {
       // If check fails but no token, might be first user - allow proceeding
-      if (!inviteToken.trim()) {
+      if (!values.inviteToken.trim()) {
         setStep('register');
       } else {
         setError(err instanceof Error ? err.message : 'Failed to validate invite token');
@@ -96,16 +118,15 @@ export function SignupPage() {
     }
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRegister = async (values: RegisterFormValues) => {
     setError('');
 
-    if (password !== confirmPassword) {
+    if (values.password !== values.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    if (password.length < 8) {
+    if (values.password.length < 8) {
       setError('Password must be at least 8 characters');
       return;
     }
@@ -113,8 +134,9 @@ export function SignupPage() {
     setLoading(true);
 
     try {
+      const inviteToken = inviteForm.getValues('inviteToken');
       // First user doesn't need invite token
-      await register(email, password, name || undefined, inviteToken || undefined);
+      await register(values.email, values.password, values.name || undefined, inviteToken || undefined);
       navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to register');
@@ -137,32 +159,41 @@ export function SignupPage() {
             <CardDescription>Enter your invite code to create your account</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleCheckInvite} className="space-y-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="inviteToken">Invite Code (Optional for first user)</Label>
-                <Input
-                  id="inviteToken"
-                  type="text"
-                  value={inviteToken}
-                  onChange={(e) => setInviteToken(e.target.value)}
-                  placeholder="Enter your invite code (optional)"
-                  disabled={loading}
+            <Form {...inviteForm}>
+              <form onSubmit={inviteForm.handleSubmit(handleCheckInvite)} className="space-y-4">
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+                <FormField
+                  control={inviteForm.control}
+                  name="inviteToken"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Invite Code (Optional for first user)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="text"
+                          placeholder="Enter your invite code (optional)"
+                          disabled={loading}
+                          {...field}
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        If you're the first user, you can register without an invite code.
+                      </p>
+                    </FormItem>
+                  )}
                 />
-                <p className="text-xs text-muted-foreground">
-                  If you're the first user, you can register without an invite code.
-                </p>
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Checking...' : 'Continue to Registration'}
-              </Button>
-            </form>
-            <div className="mt-6 pt-6 border-t">
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Checking...' : 'Continue to Registration'}
+                </Button>
+              </form>
+            </Form>
+            <div className="mt-6 pt-6">
+              <Separator className="mb-6" />
               <p className="text-sm text-center text-muted-foreground mb-3">
                 Don't have an invite? Contact an administrator to request one.
               </p>
@@ -192,83 +223,118 @@ export function SignupPage() {
           <CardDescription>Complete your registration</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleRegister} className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="name">Name (Optional)</Label>
-              <Input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
-                disabled={loading}
+          <Form {...registerForm}>
+            <form onSubmit={registerForm.handleSubmit(handleRegister)} className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              <FormField
+                control={registerForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        placeholder="Your name"
+                        disabled={loading}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                required
-                disabled={loading || emailFromInvite}
+              <FormField
+                control={registerForm.control}
+                name="email"
+                rules={{ required: 'Email is required' }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="your@email.com"
+                        disabled={loading || emailFromInvite}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 8 characters"
-                required
-                disabled={loading}
-                minLength={8}
+              <FormField
+                control={registerForm.control}
+                name="password"
+                rules={{ 
+                  required: 'Password is required',
+                  minLength: { value: 8, message: 'Password must be at least 8 characters' }
+                }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="At least 8 characters"
+                        disabled={loading}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm your password"
-                required
-                disabled={loading}
-                minLength={8}
+              <FormField
+                control={registerForm.control}
+                name="confirmPassword"
+                rules={{ 
+                  required: 'Please confirm your password',
+                  validate: (value) => value === registerForm.getValues('password') || 'Passwords do not match'
+                }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirm Password</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="Confirm your password"
+                        disabled={loading}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Creating Account...' : 'Create Account'}
-            </Button>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                className="flex-1"
-                onClick={() => setStep('invite')}
-                disabled={loading}
-              >
-                Back
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Creating Account...' : 'Create Account'}
               </Button>
-            </div>
-            <div className="mt-4 pt-4 border-t text-center">
-              <span className="text-sm text-muted-foreground">Already have an account? </span>
-              <Link to="/login" className="text-sm font-medium text-orange-600 hover:underline">
-                Login here
-              </Link>
-            </div>
-          </form>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="flex-1"
+                  onClick={() => setStep('invite')}
+                  disabled={loading}
+                >
+                  Back
+                </Button>
+              </div>
+              <div className="mt-4 pt-4 text-center">
+                <Separator className="mb-4" />
+                <span className="text-sm text-muted-foreground">Already have an account? </span>
+                <Link to="/login" className="text-sm font-medium text-orange-600 hover:underline">
+                  Login here
+                </Link>
+              </div>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </div>

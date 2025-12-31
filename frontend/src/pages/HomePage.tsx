@@ -4,17 +4,37 @@ import { SearchBar } from '@/components/SearchBar';
 import { RandomButton } from '@/components/RandomButton';
 import { AddRecipeForm } from '@/components/AddRecipeForm';
 import { RecipeGrid } from '@/components/RecipeGrid';
+import { ShoppingCartDialog } from '@/components/ShoppingCartDialog';
+import { ShoppingCartDropdown } from '@/components/ShoppingCartDropdown';
 import { useRecipes, useSearchRecipes } from '@/hooks/useRecipes';
 import { useAuth } from '@/contexts/AuthContext';
+import { useShoppingCart, type SavedShoppingCart } from '@/hooks/useShoppingCart';
 import { Button } from '@/components/ui/button';
-import { ChefHat, LogOut, Shield } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
+import { ChefHat, LogOut, Shield, ShoppingCart } from 'lucide-react';
 
 export function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedRecipes, setSelectedRecipes] = useState<Set<string>>(new Set());
+  const [showShoppingCartDialog, setShowShoppingCartDialog] = useState(false);
+  const [currentShoppingCart, setCurrentShoppingCart] = useState<SavedShoppingCart | null>(null);
   const { data: allRecipes = [], isLoading: isLoadingAll } = useRecipes();
   const { data: searchResults = [], isLoading: isLoadingSearch } = useSearchRecipes(searchQuery);
   const { user, logout } = useAuth();
+  const { savedCart, saveShoppingCart, removeShoppingCart } = useShoppingCart();
   const navigate = useNavigate();
+
+  const handleRecipeSelect = (recipeId: string) => {
+    setSelectedRecipes(prev => new Set(prev).add(recipeId));
+  };
+
+  const handleRecipeDeselect = (recipeId: string) => {
+    setSelectedRecipes(prev => {
+      const next = new Set(prev);
+      next.delete(recipeId);
+      return next;
+    });
+  };
 
   const recipes = searchQuery.trim() ? searchResults : allRecipes;
   const isLoading = searchQuery.trim() ? isLoadingSearch : isLoadingAll;
@@ -46,6 +66,12 @@ export function HomePage() {
             <div className="flex items-center gap-2">
               {user && (
                 <>
+                  <ShoppingCartDropdown
+                    onSelectCart={(cart) => {
+                      setCurrentShoppingCart(cart);
+                      setShowShoppingCartDialog(true);
+                    }}
+                  />
                   <div className="text-right hidden sm:block">
                     <p className="text-sm font-medium">{user.name || user.email}</p>
                     {user.isAdmin && (
@@ -89,18 +115,68 @@ export function HomePage() {
           <div className="flex-1">
             <SearchBar value={searchQuery} onChange={setSearchQuery} />
           </div>
-          <RandomButton />
+          <div className="flex gap-2">
+            {selectedRecipes.size > 0 && (
+              <Button
+                onClick={() => setShowShoppingCartDialog(true)}
+                className="bg-orange-500 hover:bg-orange-600"
+              >
+                <ShoppingCart className="w-4 h-4 mr-2" />
+                Create Shopping Cart ({selectedRecipes.size})
+              </Button>
+            )}
+            <RandomButton />
+          </div>
         </div>
 
         {/* Recipe Grid */}
         {isLoading ? (
           <div className="text-center py-12 sm:py-16 text-muted-foreground">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-orange-600 mb-4"></div>
+            <Spinner className="h-8 w-8 sm:h-12 sm:w-12 text-orange-600 mb-4 mx-auto" />
             <p className="text-sm sm:text-base">Loading recipes...</p>
           </div>
         ) : (
-          <RecipeGrid recipes={recipes} />
+          <RecipeGrid 
+            recipes={recipes} 
+            selectedRecipes={selectedRecipes}
+            onRecipeSelect={handleRecipeSelect}
+            onRecipeDeselect={handleRecipeDeselect}
+          />
         )}
+
+        {/* Shopping Cart Dialog */}
+        <ShoppingCartDialog
+          open={showShoppingCartDialog}
+          onOpenChange={setShowShoppingCartDialog}
+          recipeIds={currentShoppingCart ? currentShoppingCart.recipeIds : Array.from(selectedRecipes)}
+          onClose={() => {
+            setShowShoppingCartDialog(false);
+            setSelectedRecipes(new Set());
+            setCurrentShoppingCart(null);
+          }}
+          onSave={async (recipeIds, shoppingList) => {
+            await saveShoppingCart(recipeIds, shoppingList);
+          }}
+          isSaved={currentShoppingCart !== null || savedCart !== null}
+          currentShoppingCart={currentShoppingCart ? { 
+            id: currentShoppingCart.id, 
+            recipeIds: currentShoppingCart.recipeIds, 
+            shoppingList: currentShoppingCart.shoppingList, 
+            checkedItems: currentShoppingCart.checkedItems,
+            shareToken: currentShoppingCart.shareToken
+          } : null}
+          savedCartFromHook={savedCart ? {
+            id: savedCart.id,
+            recipeIds: savedCart.recipeIds,
+            shoppingList: savedCart.shoppingList,
+            checkedItems: savedCart.checkedItems,
+            shareToken: savedCart.shareToken
+          } : null}
+          onComplete={async () => {
+            await removeShoppingCart();
+            setCurrentShoppingCart(null);
+          }}
+        />
       </div>
     </div>
   );

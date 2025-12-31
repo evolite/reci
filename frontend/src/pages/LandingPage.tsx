@@ -1,17 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
+import { useForm } from 'react-hook-form';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { ChefHat, Sparkles, Search, Plus, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
+import { ChefHat, Sparkles, Search, Plus, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
 import { joinWaitlist } from '@/lib/api';
+
+interface WaitlistFormValues {
+  email: string;
+}
 
 interface Recipe {
   id: string;
   dishName: string;
   description: string;
   thumbnailUrl: string;
-  youtubeUrl: string;
+  videoUrl: string;
   cuisineType: string;
   tags: string[];
 }
@@ -28,12 +35,16 @@ export function LandingPage() {
   const [searchParams] = useSearchParams();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
-  const [email, setEmail] = useState('');
   const [waitlistLoading, setWaitlistLoading] = useState(false);
   const [waitlistSuccess, setWaitlistSuccess] = useState<WaitlistResponse | null>(null);
   const [waitlistError, setWaitlistError] = useState('');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const hasInviteToken = searchParams.get('token');
+  const waitlistForm = useForm<WaitlistFormValues>({
+    defaultValues: {
+      email: '',
+    },
+  });
 
   useEffect(() => {
     // Fetch public recipes
@@ -102,16 +113,15 @@ export function LandingPage() {
     };
   }, [recipes]);
 
-  const handleJoinWaitlist = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleJoinWaitlist = async (values: WaitlistFormValues) => {
     setWaitlistError('');
     setWaitlistSuccess(null);
     setWaitlistLoading(true);
 
     try {
-      const data = await joinWaitlist(email);
+      const data = await joinWaitlist(values.email);
       setWaitlistSuccess(data);
-      setEmail('');
+      waitlistForm.reset();
     } catch (err) {
       setWaitlistError(err instanceof Error ? err.message : 'Failed to join waitlist');
     } finally {
@@ -310,34 +320,46 @@ export function LandingPage() {
                   </p>
                 </div>
               ) : (
-                <form onSubmit={handleJoinWaitlist} className="space-y-3">
-                  {waitlistError && (
-                    <div className="bg-red-500/20 border border-red-500/50 rounded p-3 text-sm text-white">
-                      {waitlistError}
-                    </div>
-                  )}
-                  <Input
-                    type="email"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={waitlistLoading}
-                    className="bg-white/90 text-gray-900 placeholder:text-gray-500"
-                  />
-                  <Button
-                    type="submit"
-                    disabled={waitlistLoading}
-                    className="w-full bg-white text-orange-600 hover:bg-gray-100"
-                    size="lg"
-                  >
-                    {waitlistLoading ? 'Joining...' : (
-                      <>
-                        Join Waitlist <ArrowRight className="w-4 h-4 ml-2" />
-                      </>
+                <Form {...waitlistForm}>
+                  <form onSubmit={waitlistForm.handleSubmit(handleJoinWaitlist)} className="space-y-3">
+                    {waitlistError && (
+                      <Alert variant="destructive" className="bg-red-500/20 border-red-500/50 text-white">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>{waitlistError}</AlertDescription>
+                      </Alert>
                     )}
-                  </Button>
-                </form>
+                    <FormField
+                      control={waitlistForm.control}
+                      name="email"
+                      rules={{ required: 'Email is required' }}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input
+                              type="email"
+                              placeholder="your@email.com"
+                              disabled={waitlistLoading}
+                              className="bg-white/90 text-gray-900 placeholder:text-gray-500"
+                              {...field}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      type="submit"
+                      disabled={waitlistLoading}
+                      className="w-full bg-white text-orange-600 hover:bg-gray-100"
+                      size="lg"
+                    >
+                      {waitlistLoading ? 'Joining...' : (
+                        <>
+                          Join Waitlist <ArrowRight className="w-4 h-4 ml-2" />
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                </Form>
               )}
             </CardContent>
           </Card>

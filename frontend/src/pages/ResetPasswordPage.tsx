@@ -1,22 +1,32 @@
 import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { resetPassword } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ChefHat, AlertCircle, CheckCircle2 } from 'lucide-react';
+
+interface ResetPasswordFormValues {
+  password: string;
+  confirmPassword: string;
+}
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const form = useForm<ResetPasswordFormValues>({
+    defaultValues: {
+      password: '',
+      confirmPassword: '',
+    },
+  });
 
   useEffect(() => {
     if (!token) {
@@ -24,8 +34,7 @@ export function ResetPasswordPage() {
     }
   }, [token]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (values: ResetPasswordFormValues) => {
     setError('');
 
     if (!token) {
@@ -33,20 +42,10 @@ export function ResetPasswordPage() {
       return;
     }
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
-      return;
-    }
-
     setLoading(true);
 
     try {
-      await resetPassword(token, password);
+      await resetPassword(token, values.password);
       setSuccess(true);
       setTimeout(() => {
         navigate('/login');
@@ -79,45 +78,65 @@ export function ResetPasswordPage() {
               </AlertDescription>
             </Alert>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="password">New Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 8 characters"
-                  required
-                  disabled={loading || !token}
-                  minLength={8}
-                  autoComplete="new-password"
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+                <FormField
+                  control={form.control}
+                  name="password"
+                  rules={{ 
+                    required: 'Password is required',
+                    minLength: { value: 8, message: 'Password must be at least 8 characters' }
+                  }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>New Password</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="At least 8 characters"
+                          disabled={loading || !token}
+                          autoComplete="new-password"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm your password"
-                  required
-                  disabled={loading || !token}
-                  minLength={8}
-                  autoComplete="new-password"
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  rules={{ 
+                    required: 'Please confirm your password',
+                    validate: (value) => value === form.getValues('password') || 'Passwords do not match'
+                  }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirm New Password</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="Confirm your password"
+                          disabled={loading || !token}
+                          autoComplete="new-password"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading || !token}>
-                {loading ? 'Resetting...' : 'Reset Password'}
-              </Button>
-            </form>
+                <Button type="submit" className="w-full" disabled={loading || !token}>
+                  {loading ? 'Resetting...' : 'Reset Password'}
+                </Button>
+              </form>
+            </Form>
           )}
           <div className="mt-4 text-center">
             <Link to="/login" className="text-sm text-muted-foreground hover:underline">

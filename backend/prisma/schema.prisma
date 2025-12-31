@@ -26,6 +26,7 @@ model User {
   createdInvites        Invite[]  @relation("CreatedBy")
   usedInvite            Invite?   @relation("UsedBy")
   recipes               Recipe[]
+  shoppingCart          ShoppingCart?
 
   @@map("users")
 }
@@ -50,7 +51,8 @@ model Invite {
 
 model Recipe {
   id              String   @id @default(uuid())
-  youtubeUrl      String   @unique
+  videoUrl        String   @unique
+  videoPlatform   String?  // Optional platform identifier (e.g., "youtube", "instagram", "tiktok")
   thumbnailUrl    String
   description     String   @default("")
   dishName        String
@@ -77,4 +79,20 @@ model Waitlist {
   updatedAt DateTime @updatedAt
 
   @@map("waitlist")
+}
+
+model ShoppingCart {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  recipeIds     String[] @default([])
+  shoppingList  Json     // ShoppingListResponse structure
+  checkedItems  String[] @default([])
+  shareToken    String?  @unique // UUID for sharing
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([shareToken])
+  @@map("shopping_carts")
 }

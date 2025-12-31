@@ -57,3 +57,40 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  
+  .scrollbar-thumb-orange-300::-webkit-scrollbar-thumb {
+    background-color: rgb(253 186 116);
+    border-radius: 0.5rem;
+  }
+  
+  .scrollbar-thumb-orange-400::-webkit-scrollbar-thumb {
+    background-color: rgb(251 146 60);
+    border-radius: 0.5rem;
+  }
+  
+  .scrollbar-track-transparent::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgb(253 186 116);
+    border-radius: 0.5rem;
+  }
+  
+  .scrollbar-thin:hover::-webkit-scrollbar-thumb {
+    background-color: rgb(251 146 60);
+  }
+}

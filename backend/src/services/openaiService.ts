@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { RecipeAnalysis } from '../models/Recipe';
+import { RecipeAnalysis, ShoppingListResponse } from '../models/Recipe';
 import { sanitizeInput } from '../utils/validation';
 
 const openai = new OpenAI({
@@ -30,12 +30,16 @@ export async function analyzeRecipe(
     ? `\n\nTop Comments from viewers (these often contain full recipes):\n${commentsList}`
     : '';
 
-  const prompt = `Analyze the following YouTube video about a recipe and extract ALL relevant information. Return ONLY a valid JSON object with no additional text.
+  const prompt = `Analyze the following recipe content (from a video, blog post, or recipe website) and extract ALL relevant information. Return ONLY a valid JSON object with no additional text. 
 
-Video Title: ${sanitizedTitle}
-Video Description: ${sanitizedDescription}${commentsText}
+IMPORTANT: Even if the title or description is minimal or unclear, you MUST still return a valid JSON object with your best guess for the dish name, cuisine type, and ingredients based on what information is available. Do NOT return an error object - always return the required JSON structure.
 
-IMPORTANT: The comments section often contains the FULL RECIPE with ingredients and step-by-step instructions. Pay special attention to comments that list ingredients, measurements, cooking times, temperatures, and step-by-step instructions. Extract the complete recipe text if found.
+Title: ${sanitizedTitle}
+Description: ${sanitizedDescription}${commentsText}
+
+IMPORTANT: The description or comments section often contains the FULL RECIPE with ingredients and step-by-step instructions. Pay special attention to text that lists ingredients, measurements, cooking times, temperatures, and step-by-step instructions. Extract the complete recipe text if found.
+
+If the title or description is unclear, use your knowledge to infer what dish this might be based on the available information. For example, if the title is just "Pigs in a Blanket", infer that this is likely an American appetizer dish.
 
 Extract and return a JSON object with the following structure:
 {
@@ -45,8 +49,8 @@ Extract and return a JSON object with the following structure:
   "ingredients": ["2 dl milk", "500 g flour", "3 eggs", "1 tsp salt", "etc."],
   "instructions": "ONLY the step-by-step cooking instructions. Do NOT include any ingredient lists, 'Ingredients:' headings, or ingredient measurements. Extract ONLY the actual cooking steps, methods, and techniques. Format clearly with numbered steps or paragraphs. Include cooking times, temperatures (in °C), and all important details.",
   "suggestedTags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
-  "enhancedTitle": "A clear, descriptive title for this dish/recipe (more informative than the YouTube title if possible, or use the YouTube title if it's already good). Do not include 'video' or 'YouTube' in the title.",
-  "enhancedDescription": "A comprehensive description of the DISH itself - what it is, what makes it special, its flavors, textures, cooking method, difficulty level, time required, serving size, etc. Describe the dish, NOT the video. Do not mention 'video', 'YouTube', 'watch', or anything about viewing it."
+  "enhancedTitle": "A clear, descriptive title for this dish/recipe (more informative than the video title if possible, or use the video title if it's already good). Do not include 'video' in the title.",
+  "enhancedDescription": "A comprehensive description of the DISH itself - what it is, what makes it special, its flavors, textures, cooking method, difficulty level, time required, serving size, etc. Describe the dish, NOT the video. Do not mention 'video', 'watch', or anything about viewing it."
 }
 
 The mainIngredients array should contain 3-5 key ingredient names (without amounts) that are essential to the dish.
@@ -65,7 +69,7 @@ If the recipe text contains both ingredients and instructions, you MUST:
 3. Remove any "Ingredients:" sections, headings, or lists from the instructions field
 The suggestedTags array should contain 5-8 relevant tags based on the recipe, comments, and context (e.g., "easy", "quick", "vegetarian", "spicy", "dessert", "breakfast", "30-minutes", "one-pot", "gluten-free", etc.).
 The enhancedTitle should be a clear, descriptive title that helps identify the recipe.
-The enhancedDescription should describe the DISH itself - its characteristics, flavors, cooking method, difficulty, time, servings, etc. Do NOT mention the video, YouTube, or anything about watching it. Focus purely on describing the dish.
+The enhancedDescription should describe the DISH itself - its characteristics, flavors, cooking method, difficulty, time, servings, etc. Do NOT mention the video or anything about watching it. Focus purely on describing the dish.
 Return only the JSON object, no markdown formatting, no code blocks.`;
 
   try {
@@ -74,7 +78,7 @@ Return only the JSON object, no markdown formatting, no code blocks.`;
       messages: [
         {
           role: 'system',
-          content: 'You are a helpful assistant that extracts recipe information from video titles and descriptions. Always return valid JSON only, no markdown, no code blocks, just the JSON object.',
+          content: 'You are a helpful assistant that extracts recipe information from video titles and descriptions. You MUST always return a valid JSON object with the required structure (dishName, cuisineType, mainIngredients, etc.), even if the video information is minimal. Never return an error object - always provide your best guess based on available information. Always return valid JSON only, no markdown, no code blocks, just the JSON object.',
         },
         {
           role: 'user',
@@ -100,14 +104,49 @@ Return only the JSON object, no markdown formatting, no code blocks.`;
     // Parse the JSON response
     let analysis: RecipeAnalysis;
     try {
-      analysis = JSON.parse(cleanedContent) as RecipeAnalysis;
+      const parsed = JSON.parse(cleanedContent) as any;
+      
+      // Check if OpenAI returned an error object instead of recipe data
+      if (parsed.error && !parsed.dishName) {
+        console.warn('OpenAI returned an error object. Creating fallback recipe data from available information.');
+        // Create fallback analysis from available metadata
+        analysis = {
+          dishName: sanitizedTitle || 'Unknown Dish',
+          cuisineType: 'International',
+          mainIngredients: [],
+          ingredients: [],
+          suggestedTags: [],
+          enhancedTitle: sanitizedTitle || 'Unknown Dish',
+          enhancedDescription: sanitizedDescription || 'Recipe information will be added later.',
+        };
+      } else {
+        analysis = parsed as RecipeAnalysis;
+      }
     } catch (parseError) {
+      console.error('Failed to parse OpenAI response. Raw content:', cleanedContent.substring(0, 500));
       throw new Error(`Failed to parse JSON response from OpenAI: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
     }
 
-    // Validate the response structure
+    // Validate the response structure - provide defaults if missing
     if (!analysis.dishName || !analysis.cuisineType || !Array.isArray(analysis.mainIngredients)) {
-      throw new Error('Invalid response structure from OpenAI');
+      console.error('Invalid OpenAI response structure. Received:', JSON.stringify(analysis, null, 2));
+      
+      // Provide fallback defaults if OpenAI didn't return proper structure
+      if (!analysis.dishName) {
+        analysis.dishName = sanitizedTitle || 'Unknown Dish';
+      }
+      if (!analysis.cuisineType) {
+        analysis.cuisineType = 'International';
+      }
+      if (!Array.isArray(analysis.mainIngredients)) {
+        analysis.mainIngredients = [];
+      }
+      
+      console.warn('Using fallback values for missing fields:', {
+        dishName: analysis.dishName,
+        cuisineType: analysis.cuisineType,
+        mainIngredients: analysis.mainIngredients
+      });
     }
 
     return analysis;
@@ -156,7 +195,7 @@ Extract and return a JSON object with the following structure:
   "instructions": "ONLY the step-by-step cooking instructions. Do NOT include any ingredient lists, 'Ingredients:' headings, or ingredient measurements. Extract ONLY the actual cooking steps, methods, and techniques. Format clearly with numbered steps or paragraphs. Include cooking times, temperatures (in °C), and all important details.",
   "suggestedTags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
   "enhancedTitle": "A clear, descriptive title for this recipe",
-  "enhancedDescription": "A comprehensive description of the DISH itself - what it is, its flavors, textures, cooking method, difficulty level, time required, serving size, key techniques, etc. Describe the dish, NOT the video. Do not mention 'video', 'YouTube', 'watch', or anything about viewing it."
+  "enhancedDescription": "A comprehensive description of the DISH itself - what it is, its flavors, textures, cooking method, difficulty level, time required, serving size, key techniques, etc. Describe the dish, NOT the video. Do not mention 'video', 'watch', or anything about viewing it."
 }
 
 The mainIngredients array should contain 3-5 key ingredient names (without amounts) that are essential to the dish.
@@ -179,7 +218,7 @@ If the recipe text contains both ingredients and instructions, you MUST:
 VERY IMPORTANT: When you see text like "Ingredients: 2 cups flour, 1 cup sugar..." in the recipe, put "2 dl flour, 1 dl sugar" in the ingredients array, and DO NOT include this text in the instructions field at all. The instructions should only contain steps like "Mix the flour and sugar", "Bake for 30 minutes", etc.
 The suggestedTags array should contain 5-8 relevant tags based on the recipe (e.g., "easy", "quick", "vegetarian", "spicy", "dessert", "breakfast", "30-minutes", "one-pot", "gluten-free", etc.).
 The enhancedTitle should be a clear, descriptive title that helps identify the recipe.
-The enhancedDescription should describe the DISH itself - its characteristics, flavors, cooking method, difficulty, time, servings, etc. Do NOT mention the video, YouTube, or anything about watching it. Focus purely on describing the dish.
+The enhancedDescription should describe the DISH itself - its characteristics, flavors, cooking method, difficulty, time, servings, etc. Do NOT mention the video or anything about watching it. Focus purely on describing the dish.
 Return only the JSON object, no markdown formatting, no code blocks.`;
 
   try {
@@ -216,12 +255,14 @@ Return only the JSON object, no markdown formatting, no code blocks.`;
     try {
       analysis = JSON.parse(cleanedContent) as RecipeAnalysis;
     } catch (parseError) {
+      console.error('Failed to parse OpenAI response (from text). Raw content:', cleanedContent.substring(0, 500));
       throw new Error(`Failed to parse JSON response from OpenAI: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
     }
 
     // Validate the response structure
     if (!analysis.dishName || !analysis.cuisineType || !Array.isArray(analysis.mainIngredients)) {
-      throw new Error('Invalid response structure from OpenAI');
+      console.error('Invalid OpenAI response structure (from text). Received:', JSON.stringify(analysis, null, 2));
+      throw new Error(`Invalid response structure from OpenAI. Missing required fields: dishName=${!!analysis.dishName}, cuisineType=${!!analysis.cuisineType}, mainIngredients=${Array.isArray(analysis.mainIngredients)}`);
     }
 
     return analysis;
@@ -268,8 +309,8 @@ Extract and return a JSON object with the following structure:
   "cuisineType": "The cuisine type (e.g., 'Indian', 'Italian', 'American', 'Japanese', 'Mexican', etc.)",
   "mainIngredients": ["ingredient1", "ingredient2", "ingredient3", "ingredient4", "ingredient5"],
   "suggestedTags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
-  "enhancedTitle": "A clear, descriptive title for this dish based on what you see in the image. Do not include 'video' or 'YouTube' in the title.",
-  "enhancedDescription": "A comprehensive description of the DISH itself based on what you observe - its appearance, flavors, textures, cooking method, visual characteristics, etc. Describe the dish, NOT the video. Do not mention 'video', 'YouTube', 'watch', or anything about viewing it."
+  "enhancedTitle": "A clear, descriptive title for this dish based on what you see in the image. Do not include 'video' in the title.",
+  "enhancedDescription": "A comprehensive description of the DISH itself based on what you observe - its appearance, flavors, textures, cooking method, visual characteristics, etc. Describe the dish, NOT the video. Do not mention 'video', 'watch', or anything about viewing it."
 }
 
 The mainIngredients array should contain 3-5 key ingredient names (without amounts) that you can identify or infer from the image.
@@ -322,18 +363,171 @@ Return only the JSON object, no markdown formatting, no code blocks.`;
     try {
       analysis = JSON.parse(cleanedContent) as RecipeAnalysis;
     } catch (parseError) {
+      console.error('Failed to parse OpenAI response (vision). Raw content:', cleanedContent.substring(0, 500));
       throw new Error(`Failed to parse JSON response from OpenAI: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
     }
 
     // Validate the response structure
     if (!analysis.dishName || !analysis.cuisineType || !Array.isArray(analysis.mainIngredients)) {
-      throw new Error('Invalid response structure from OpenAI');
+      console.error('Invalid OpenAI response structure (vision). Received:', JSON.stringify(analysis, null, 2));
+      throw new Error(`Invalid response structure from OpenAI. Missing required fields: dishName=${!!analysis.dishName}, cuisineType=${!!analysis.cuisineType}, mainIngredients=${Array.isArray(analysis.mainIngredients)}`);
     }
 
     return analysis;
   } catch (error) {
     if (error instanceof Error) {
       throw new Error(`Failed to analyze recipe with vision: ${error.message}`);
+    }
+    throw error;
+  }
+}
+
+export interface RecipeForShoppingList {
+  id: string;
+  dishName: string;
+  ingredients: string[];
+}
+
+export async function generateShoppingList(recipes: RecipeForShoppingList[]): Promise<ShoppingListResponse> {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY is not set');
+  }
+
+  // Separate recipes with and without ingredients
+  const recipesWithIngredients = recipes.filter(r => r.ingredients && r.ingredients.length > 0);
+  const missingRecipes = recipes.filter(r => !r.ingredients || r.ingredients.length === 0);
+
+  // If no recipes have ingredients, return empty response
+  if (recipesWithIngredients.length === 0) {
+    return {
+      sections: [],
+      missingRecipes: missingRecipes.map(r => ({ id: r.id, dishName: r.dishName })),
+      totalRecipes: recipes.length,
+      recipesWithIngredients: 0,
+    };
+  }
+
+  // Build ingredients list with recipe context
+  const ingredientsList = recipesWithIngredients.map(recipe => {
+    const ingredientsText = recipe.ingredients.join('\n');
+    return `Recipe: ${recipe.dishName}\nIngredients:\n${ingredientsText}`;
+  }).join('\n\n');
+
+  // Sanitize input
+  const sanitizedIngredients = sanitizeInput(ingredientsList, 10000);
+
+  const prompt = `You are organizing a shopping list for multiple recipes. Your task is to combine all ingredients from the recipes below and organize them into logical supermarket sections.
+
+Recipes and their ingredients:
+${sanitizedIngredients}
+
+IMPORTANT INSTRUCTIONS:
+1. Combine all ingredients from all recipes into a single shopping list
+2. Consolidate duplicate ingredients by adding their amounts together (e.g., "2 dl milk" + "1 dl milk" = "3 dl milk")
+3. If amounts can't be easily combined (different units or unclear amounts), list them separately
+4. REMOVE ALL PREPARATION INSTRUCTIONS: Strip out any preparation details like "chopped", "sliced", "peeled", "diced", "coarsely chopped", "finely chopped", etc. Just list the raw ingredient.
+5. REMOVE PREPARED VOLUMES: Ignore volume measurements that refer to prepared/cut ingredients (e.g., "about 300 ml" after chopping). Only keep the original quantity needed.
+6. SIMPLIFY TO BASIC SHOPPING LIST FORMAT: List ingredients in their simplest form - just the ingredient name and basic quantity needed. Examples:
+   - "1 small yellow onion, coarsely chopped (about 300 ml)" → "1 onion"
+   - "2 celery ribs, sliced 1/8" thick (about 300 ml)" → "2 celery ribs" or "2 stalks celery"
+   - "1 large carrot, peeled, halved lengthwise, sliced 1/8" thick (about 240 ml)" → "1 carrot" or "1 large carrot"
+   - "60 ml finely chopped fresh parsley" → "parsley" or "fresh parsley" (estimate quantity if needed)
+7. Organize ingredients into logical supermarket sections such as:
+   - Produce (fruits, vegetables, fresh herbs)
+   - Meat & Seafood (chicken, beef, fish, etc.)
+   - Dairy (milk, cheese, butter, yogurt, etc.)
+   - Spices & Seasonings (salt, pepper, spices, herbs, etc.)
+   - Pantry (flour, sugar, oil, canned goods, etc.)
+   - Bakery (bread, rolls, etc.)
+   - Frozen (if applicable)
+   - Other (anything that doesn't fit the above categories)
+8. Keep measurements simple and in metric units (ml, dl, L, g, kg, etc.) when applicable, but prioritize simplicity
+
+Return ONLY a valid JSON object with this structure:
+{
+  "sections": [
+    {
+      "name": "Section Name",
+      "ingredients": ["ingredient with amount", "another ingredient"]
+    }
+  ]
+}
+
+Example:
+{
+  "sections": [
+    {
+      "name": "Produce",
+      "ingredients": ["2 carrots", "1 onion", "2 celery ribs", "fresh parsley"]
+    },
+    {
+      "name": "Dairy",
+      "ingredients": ["3 dl milk", "200 g butter"]
+    },
+    {
+      "name": "Pantry",
+      "ingredients": ["500 g flour", "2 dl olive oil", "1 tsp salt"]
+    }
+  ]
+}
+
+Remember: Keep it simple and generic - this is a shopping list, not a recipe. Remove all preparation instructions and keep only the basic ingredient names with simple quantities.
+
+Return only the JSON object, no markdown formatting, no code blocks, no additional text.`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a helpful assistant that organizes shopping lists by supermarket sections. Always return valid JSON only, no markdown, no code blocks, just the JSON object.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      temperature: 0.2,
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('No response from OpenAI');
+    }
+
+    // Clean the content - remove markdown code blocks if present
+    let cleanedContent = content.trim();
+    if (cleanedContent.startsWith('```json')) {
+      cleanedContent = cleanedContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleanedContent.startsWith('```')) {
+      cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+
+    // Parse the JSON response
+    let shoppingList: { sections: Array<{ name: string; ingredients: string[] }> };
+    try {
+      shoppingList = JSON.parse(cleanedContent) as { sections: Array<{ name: string; ingredients: string[] }> };
+    } catch (parseError) {
+      console.error('Failed to parse OpenAI shopping list response. Raw content:', cleanedContent.substring(0, 500));
+      throw new Error(`Failed to parse JSON response from OpenAI: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+    }
+
+    // Validate the response structure
+    if (!Array.isArray(shoppingList.sections)) {
+      console.error('Invalid OpenAI shopping list response structure. Received:', JSON.stringify(shoppingList, null, 2));
+      throw new Error('Invalid response structure from OpenAI: sections must be an array');
+    }
+
+    return {
+      sections: shoppingList.sections,
+      missingRecipes: missingRecipes.map(r => ({ id: r.id, dishName: r.dishName })),
+      totalRecipes: recipes.length,
+      recipesWithIngredients: recipesWithIngredients.length,
+    };
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Failed to generate shopping list with OpenAI: ${error.message}`);
     }
     throw error;
   }

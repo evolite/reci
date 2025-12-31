@@ -78,3 +78,30 @@ export function sanitizeInput(input: string, maxLength: number = 10000): string 
 
   return sanitized;
 }
+
+export function validateVideoUrl(url: string): { valid: boolean; error?: string } {
+  if (!url || typeof url !== 'string') {
+    return { valid: false, error: 'URL is required' };
+  }
+
+  const trimmedUrl = url.trim();
+  
+  if (trimmedUrl.length === 0) {
+    return { valid: false, error: 'URL cannot be empty' };
+  }
+
+  // Validate URL format
+  try {
+    const urlObj = new URL(trimmedUrl);
+    
+    // Must be HTTP or HTTPS
+    if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
+      return { valid: false, error: 'URL must use HTTP or HTTPS protocol' };
+    }
+    
+    // URL is valid
+    return { valid: true };
+  } catch {
+    return { valid: false, error: 'Invalid URL format' };
+  }
+}

@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { useRandomRecipe } from '@/hooks/useRecipes';
 import { Shuffle } from 'lucide-react';
 import { useState } from 'react';
@@ -29,7 +30,7 @@ export function RandomButton() {
       >
         {isFetching ? (
           <span className="flex items-center gap-2">
-            <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600"></span>
+            <Spinner className="text-orange-600" />
             <span className="hidden sm:inline">Loading...</span>
           </span>
         ) : (

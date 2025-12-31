@@ -1,14 +1,36 @@
 import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { getInvites, createInvite, deleteInvite, getInviteStats, type Invite, type InviteStats } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Spinner } from '@/components/ui/spinner';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from '@/components/ui/empty';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { ChefHat, AlertCircle, Plus, Trash2, Copy, CheckCircle2 } from 'lucide-react';
+
+interface InviteFormValues {
+  email: string;
+  expires: string;
+}
 
 export function AdminInvitesPage() {
   const { user } = useAuth();
@@ -18,12 +40,19 @@ export function AdminInvitesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newInviteEmail, setNewInviteEmail] = useState('');
-  const [newInviteExpires, setNewInviteExpires] = useState('');
   const [creating, setCreating] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [newlyCreatedInvite, setNewlyCreatedInvite] = useState<Invite | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [inviteIdToDelete, setInviteIdToDelete] = useState<string | null>(null);
+  
+  const inviteForm = useForm<InviteFormValues>({
+    defaultValues: {
+      email: '',
+      expires: '',
+    },
+  });
 
   useEffect(() => {
     if (!user || !user.isAdmin) {
@@ -48,18 +77,16 @@ export function AdminInvitesPage() {
     }
   };
 
-  const handleCreateInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateInvite = async (values: InviteFormValues) => {
     setError('');
     setCreating(true);
 
     try {
-      const expiresInDays = newInviteExpires ? parseInt(newInviteExpires) : undefined;
-      const result = await createInvite(newInviteEmail || undefined, expiresInDays);
+      const expiresInDays = values.expires ? parseInt(values.expires) : undefined;
+      const result = await createInvite(values.email || undefined, expiresInDays);
       setInvites([result.invite, ...invites]);
       setNewlyCreatedInvite(result.invite);
-      setNewInviteEmail('');
-      setNewInviteExpires('');
+      inviteForm.reset();
       setShowCreateForm(false);
       await loadData(); // Reload stats
     } catch (err) {
@@ -69,17 +96,24 @@ export function AdminInvitesPage() {
     }
   };
 
-  const handleDeleteInvite = async (inviteId: string) => {
-    if (!confirm('Are you sure you want to revoke this invite?')) {
-      return;
-    }
+  const handleDeleteInvite = (inviteId: string) => {
+    setInviteIdToDelete(inviteId);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!inviteIdToDelete) return;
 
     try {
-      await deleteInvite(inviteId);
-      setInvites(invites.filter(inv => inv.id !== inviteId));
+      await deleteInvite(inviteIdToDelete);
+      setInvites(invites.filter(inv => inv.id !== inviteIdToDelete));
       await loadData(); // Reload stats
+      setShowDeleteDialog(false);
+      setInviteIdToDelete(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete invite');
+      setShowDeleteDialog(false);
+      setInviteIdToDelete(null);
     }
   };
 
@@ -104,7 +138,10 @@ export function AdminInvitesPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
-        <div className="text-center">Loading...</div>
+        <div className="flex flex-col items-center gap-4">
+          <Spinner className="h-8 w-8 text-orange-500" />
+          <Skeleton className="h-4 w-32" />
+        </div>
       </div>
     );
   }
@@ -235,37 +272,57 @@ export function AdminInvitesPage() {
           </CardHeader>
           <CardContent>
             {showCreateForm && (
-              <form onSubmit={handleCreateInvite} className="mb-6 p-4 border rounded-lg space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email (Optional)</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={newInviteEmail}
-                    onChange={(e) => setNewInviteEmail(e.target.value)}
-                    placeholder="Restrict to specific email (optional)"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="expires">Expires In (Days, Optional)</Label>
-                  <Input
-                    id="expires"
-                    type="number"
-                    value={newInviteExpires}
-                    onChange={(e) => setNewInviteExpires(e.target.value)}
-                    placeholder="e.g., 7 (leave empty for no expiration)"
-                    min="1"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button type="submit" disabled={creating}>
-                    {creating ? 'Creating...' : 'Create Invite'}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => setShowCreateForm(false)}>
-                    Cancel
-                  </Button>
-                </div>
-              </form>
+              <>
+                <Separator className="mb-4" />
+                <Form {...inviteForm}>
+                  <form onSubmit={inviteForm.handleSubmit(handleCreateInvite)} className="mb-6 p-4 border rounded-lg space-y-4">
+                    <FormField
+                      control={inviteForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email (Optional)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="email"
+                              placeholder="Restrict to specific email (optional)"
+                              {...field}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={inviteForm.control}
+                      name="expires"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Expires In (Days, Optional)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="e.g., 7 (leave empty for no expiration)"
+                              min="1"
+                              {...field}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <div className="flex gap-2">
+                      <Button type="submit" disabled={creating}>
+                        {creating ? 'Creating...' : 'Create Invite'}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => {
+                        setShowCreateForm(false);
+                        inviteForm.reset();
+                      }}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </>
             )}
 
             <div className="rounded-md border">
@@ -284,8 +341,18 @@ export function AdminInvitesPage() {
                 <TableBody>
                   {invites.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground">
-                        No invites yet. Create one to get started.
+                      <TableCell colSpan={7} className="p-0">
+                        <Empty className="py-12">
+                          <EmptyHeader>
+                            <EmptyMedia variant="icon">
+                              <ChefHat className="h-6 w-6" />
+                            </EmptyMedia>
+                            <EmptyTitle>No invites yet</EmptyTitle>
+                            <EmptyDescription>
+                              Create one to get started.
+                            </EmptyDescription>
+                          </EmptyHeader>
+                        </Empty>
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -297,18 +364,26 @@ export function AdminInvitesPage() {
                               <code className="text-xs bg-muted px-2 py-1 rounded flex-1 truncate">
                                 {invite.token.substring(0, 16)}...
                               </code>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleCopyToken(invite.token)}
-                                title="Copy token"
-                              >
-                                {copiedToken === invite.token ? (
-                                  <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                ) : (
-                                  <Copy className="w-4 h-4" />
-                                )}
-                              </Button>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleCopyToken(invite.token)}
+                                    >
+                                      {copiedToken === invite.token ? (
+                                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                      ) : (
+                                        <Copy className="w-4 h-4" />
+                                      )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Copy token</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             </div>
                             {!invite.used && !invite.expired && (
                               <Button
@@ -335,11 +410,11 @@ export function AdminInvitesPage() {
                         <TableCell>{invite.email || '-'}</TableCell>
                         <TableCell>
                           {invite.used ? (
-                            <span className="text-green-600">Used</span>
+                            <Badge variant="default" className="bg-green-600">Used</Badge>
                           ) : invite.expired ? (
-                            <span className="text-red-600">Expired</span>
+                            <Badge variant="destructive">Expired</Badge>
                           ) : (
-                            <span className="text-blue-600">Available</span>
+                            <Badge variant="secondary" className="bg-blue-600">Available</Badge>
                           )}
                         </TableCell>
                         <TableCell>
@@ -373,6 +448,27 @@ export function AdminInvitesPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revoke Invite</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to revoke this invite? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setInviteIdToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Revoke
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

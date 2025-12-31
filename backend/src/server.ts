@@ -5,6 +5,7 @@ import recipeRoutes from './routes/recipes';
 import authRoutes from './routes/auth';
 import inviteRoutes from './routes/invites';
 import waitlistRoutes from './routes/waitlist';
+import { cartRouter, cartPublicRouter } from './routes/cart';
 
 dotenv.config();
 
@@ -13,6 +14,10 @@ const PORT = process.env.PORT || 4000;
 
 // Middleware
 // CORS configuration - restrict to specific origins in production
+if (process.env.NODE_ENV === 'production' && !process.env.CORS_ORIGIN) {
+  throw new Error('CORS_ORIGIN environment variable is required in production');
+}
+
 const corsOptions = {
   origin: process.env.CORS_ORIGIN || '*', // In production, set CORS_ORIGIN to your frontend URL
   credentials: true,
@@ -26,6 +31,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/invites', inviteRoutes);
 app.use('/api/waitlist', waitlistRoutes);
 app.use('/api/recipes', recipeRoutes);
+app.use('/api/cart', cartRouter);
+app.use('/api/cart', cartPublicRouter);
 
 // Health check
 app.get('/health', (req, res) => {

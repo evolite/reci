@@ -1,26 +1,34 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import { forgotPassword } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ChefHat, AlertCircle, CheckCircle2 } from 'lucide-react';
 
+interface ForgotPasswordFormValues {
+  email: string;
+}
+
 export function ForgotPasswordPage() {
-  const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const form = useForm<ForgotPasswordFormValues>({
+    defaultValues: {
+      email: '',
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (values: ForgotPasswordFormValues) => {
     setError('');
     setLoading(true);
 
     try {
-      await forgotPassword(email);
+      await forgotPassword(values.email);
       setSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to request password reset');
@@ -51,30 +59,39 @@ export function ForgotPasswordPage() {
               </AlertDescription>
             </Alert>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  required
-                  disabled={loading}
-                  autoComplete="email"
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+                <FormField
+                  control={form.control}
+                  name="email"
+                  rules={{ required: 'Email is required' }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="your@email.com"
+                          disabled={loading}
+                          autoComplete="email"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Sending...' : 'Send Reset Link'}
-              </Button>
-            </form>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Sending...' : 'Send Reset Link'}
+                </Button>
+              </form>
+            </Form>
           )}
           <div className="mt-4 text-center">
             <Link to="/login" className="text-sm text-muted-foreground hover:underline">

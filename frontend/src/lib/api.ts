@@ -44,7 +44,8 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
 
 export interface Recipe {
   id: string;
-  youtubeUrl: string;
+  videoUrl: string;
+  videoPlatform?: string | null;
   thumbnailUrl: string;
   description: string;
   dishName: string;
@@ -297,11 +298,11 @@ export async function getInviteStats(): Promise<{ stats: InviteStats }> {
 }
 
 // Recipe API functions (updated to include auth)
-export async function addRecipe(youtubeUrl: string): Promise<Recipe> {
+export async function addRecipe(videoUrl: string): Promise<Recipe> {
   const response = await fetch(`${API_BASE_URL}/api/recipes`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ youtubeUrl }),
+    body: JSON.stringify({ videoUrl }),
   });
 
   return handleApiResponse<Recipe>(response);
@@ -397,4 +398,147 @@ export async function rescrapeAndAnalyzeRecipe(recipeId: string): Promise<Recipe
   });
 
   return handleApiResponse<Recipe>(response);
+}
+
+// Shopping List API functions
+export interface ShoppingListSection {
+  name: string;
+  ingredients: string[];
+}
+
+export interface ShoppingListResponse {
+  sections: ShoppingListSection[];
+  missingRecipes: Array<{
+    id: string;
+    dishName: string;
+  }>;
+  totalRecipes: number;
+  recipesWithIngredients: number;
+}
+
+export async function generateShoppingList(recipeIds: string[]): Promise<ShoppingListResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/recipes/shopping-list`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ recipeIds }),
+  });
+
+  return handleApiResponse<ShoppingListResponse>(response);
+}
+
+// Shopping Cart API functions
+export interface ShoppingCartRequest {
+  recipeIds: string[];
+  shoppingList: ShoppingListResponse;
+  checkedItems?: string[];
+}
+
+export interface ShoppingCartResponse {
+  id: string;
+  userId: string;
+  recipeIds: string[];
+  shoppingList: ShoppingListResponse;
+  checkedItems: string[];
+  shareToken: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SharedCartResponse {
+  shoppingList: ShoppingListResponse;
+  checkedItems: string[];
+  ownerName?: string | null;
+  shareToken: string;
+}
+
+export interface ShareCartResponse {
+  shareToken: string;
+  shareUrl: string;
+}
+
+export async function getShoppingCart(): Promise<ShoppingCartResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/cart`, {
+    headers: getAuthHeaders(),
+  });
+
+  return handleApiResponse<ShoppingCartResponse>(response);
+}
+
+export async function saveShoppingCart(cart: ShoppingCartRequest): Promise<ShoppingCartResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/cart`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(cart),
+  });
+
+  return handleApiResponse<ShoppingCartResponse>(response);
+}
+
+export async function deleteShoppingCart(): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/cart`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+
+  if (response.status === 401) {
+    handle401Response();
+    throw new Error('Session expired. Please login again.');
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to delete shopping cart' }));
+    throw new Error(error.error || 'Failed to delete shopping cart');
+  }
+}
+
+export async function getSharedCart(shareToken: string): Promise<SharedCartResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/cart/shared/${shareToken}`);
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to fetch shared cart' }));
+    throw new Error(error.error || 'Failed to fetch shared cart');
+  }
+
+  return response.json();
+}
+
+export async function updateSharedCart(shareToken: string, checkedItems: string[]): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/cart/shared/${shareToken}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ checkedItems }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to update shared cart' }));
+    throw new Error(error.error || 'Failed to update shared cart');
+  }
+}
+
+export async function shareShoppingCart(): Promise<ShareCartResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/cart/share`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+
+  return handleApiResponse<ShareCartResponse>(response);
+}
+
+export async function unshareShoppingCart(): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/cart/share`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+
+  if (response.status === 401) {
+    handle401Response();
+    throw new Error('Session expired. Please login again.');
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to unshare shopping cart' }));
+    throw new Error(error.error || 'Failed to unshare shopping cart');
+  }
 }

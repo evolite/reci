@@ -1,6 +1,7 @@
 export interface Recipe {
   id: string;
-  youtubeUrl: string;
+  videoUrl: string;
+  videoPlatform?: string | null;
   thumbnailUrl: string;
   description: string;
   dishName: string;
@@ -13,14 +14,15 @@ export interface Recipe {
 }
 
 export interface CreateRecipeInput {
-  youtubeUrl: string;
+  videoUrl: string;
 }
 
-export interface YouTubeVideoMetadata {
+export interface VideoMetadata {
   title: string;
   thumbnailUrl: string;
   description: string;
   topComments?: string[];
+  platform?: string;
 }
 
 export interface RecipeAnalysis {
@@ -33,4 +35,23 @@ export interface RecipeAnalysis {
   recipeText?: string; // Deprecated - use ingredients and instructions instead
   enhancedTitle?: string;
   enhancedDescription?: string;
+}
+
+export interface ShoppingListRequest {
+  recipeIds: string[];
+}
+
+export interface ShoppingListSection {
+  name: string;
+  ingredients: string[];
+}
+
+export interface ShoppingListResponse {
+  sections: ShoppingListSection[];
+  missingRecipes: Array<{
+    id: string;
+    dishName: string;
+  }>;
+  totalRecipes: number;
+  recipesWithIngredients: number;
 }

@@ -40,7 +40,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Helper function to check if JWT token is expired
+  const isTokenExpired = (token: string): boolean => {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const exp = payload.exp;
+      if (!exp) return false; // No expiration claim, assume valid
+      return Date.now() >= exp * 1000;
+    } catch (error) {
+      // If we can't parse the token, consider it invalid
+      return true;
+    }
+  };
+
   const fetchUser = async (authToken: string) => {
+    // Check if token is expired before making request
+    if (isTokenExpired(authToken)) {
+      localStorage.removeItem(TOKEN_KEY);
+      setToken(null);
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await getCurrentUser(authToken);
       setUser(response.user);

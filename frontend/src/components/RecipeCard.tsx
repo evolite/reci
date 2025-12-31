@@ -3,21 +3,43 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
+import { Spinner } from '@/components/ui/spinner';
+import { Label } from '@/components/ui/label';
+import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import type { Recipe } from '@/lib/api';
 import { ExternalLink, Tag, Edit2, Save, X, Trash2, RefreshCw } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { updateRecipe, deleteRecipe, rescrapeAndAnalyzeRecipe } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { RecipeDialog } from './RecipeDialog';
 
 interface RecipeCardProps {
   recipe: Recipe;
+  isSelected?: boolean;
+  onSelect?: (recipeId: string) => void;
+  onDeselect?: (recipeId: string) => void;
 }
 
-export function RecipeCard({ recipe }: RecipeCardProps) {
+interface TagFormValues {
+  tag: string;
+}
+
+export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }: RecipeCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [tags, setTags] = useState(recipe.tags || []);
-  const [newTag, setNewTag] = useState('');
   const [editData, setEditData] = useState({
     dishName: recipe.dishName,
     description: recipe.description,
@@ -30,7 +52,16 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
   const [isRescrapingAndAnalyzing, setIsRescrapingAndAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveProgress, setSaveProgress] = useState(0);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
   const queryClient = useQueryClient();
+  
+  const tagForm = useForm<TagFormValues>({
+    defaultValues: {
+      tag: '',
+    },
+  });
 
   // Update local state when recipe prop changes
   useEffect(() => {
@@ -50,11 +81,14 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
     }
   };
 
-  const handleAddTag = (e: React.FormEvent) => {
-    e.stopPropagation();
-    if (newTag.trim() && !tags.includes(newTag.trim())) {
-      setTags([...tags, newTag.trim()]);
-      setNewTag('');
+  const handleAddTag = (values: TagFormValues, e?: React.BaseSyntheticEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    const tagValue = values.tag.trim();
+    if (tagValue && !tags.includes(tagValue)) {
+      setTags([...tags, tagValue]);
+      tagForm.reset();
     }
   };
 
@@ -109,7 +143,8 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
       console.error('Failed to update recipe:', error);
       setIsSaving(false);
       setSaveProgress(0);
-      alert(error instanceof Error ? error.message : 'Failed to save recipe');
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to save recipe');
+      setShowErrorDialog(true);
     }
   };
 
@@ -125,18 +160,21 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
     setIsEditing(false);
   };
 
-  const handleDelete = async (e: React.MouseEvent) => {
+  const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this recipe?')) {
-      return;
-    }
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
     setIsDeleting(true);
+    setShowDeleteDialog(false);
     try {
       await deleteRecipe(recipe.id);
       queryClient.invalidateQueries({ queryKey: ['recipes'] });
     } catch (error) {
       console.error('Failed to delete recipe:', error);
-      alert(error instanceof Error ? error.message : 'Failed to delete recipe');
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to delete recipe');
+      setShowErrorDialog(true);
       setIsDeleting(false);
     }
   };
@@ -159,8 +197,17 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
       setIsRescrapingAndAnalyzing(false);
     } catch (error) {
       console.error('Failed to re-scrape and analyze recipe:', error);
-      alert(error instanceof Error ? error.message : 'Failed to re-scrape and analyze recipe');
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to re-scrape and analyze recipe');
+      setShowErrorDialog(true);
       setIsRescrapingAndAnalyzing(false);
+    }
+  };
+
+  const handleCheckboxChange = (checked: boolean) => {
+    if (checked && onSelect) {
+      onSelect(recipe.id);
+    } else if (!checked && onDeselect) {
+      onDeselect(recipe.id);
     }
   };
 
@@ -170,6 +217,8 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         className={`transition-all duration-300 hover:scale-[1.02] border-2 overflow-hidden group ${
           isEditing 
             ? 'border-orange-400 cursor-default' 
+            : isSelected
+            ? 'border-orange-500 cursor-pointer hover:shadow-xl bg-orange-50/50 dark:bg-orange-900/20'
             : 'cursor-pointer hover:shadow-xl hover:border-orange-300'
         }`}
         onClick={handleCardClick}
@@ -184,6 +233,17 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
             <>
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center">
                 <ExternalLink className="w-8 h-8 sm:w-10 sm:h-10 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </div>
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute top-2 left-2 bg-white/90 hover:bg-white dark:bg-gray-800/90 dark:hover:bg-gray-800 shadow-lg rounded-md p-1"
+              >
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={handleCheckboxChange}
+                  className="h-6 w-6 border-2 border-gray-300 dark:border-gray-600 data-[state=checked]:bg-orange-500/80 data-[state=checked]:border-orange-500/80 data-[state=checked]:text-white"
+                  aria-label={isSelected ? 'Deselect recipe' : 'Select recipe'}
+                />
               </div>
               <Button
                 onClick={handleEdit}
@@ -205,7 +265,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
                 disabled={isRescrapingAndAnalyzing}
               >
                 {isRescrapingAndAnalyzing ? (
-                  <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-current inline-block"></span>
+                  <Spinner className="h-3 w-3" />
                 ) : (
                   <>
                     <RefreshCw className="w-3 h-3 mr-1" />
@@ -214,14 +274,14 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
                 )}
               </Button>
               <Button
-                onClick={handleDelete}
+                onClick={handleDeleteClick}
                 size="sm"
                 variant="destructive"
                 className="absolute top-2 right-2 h-8 w-8 p-0 bg-red-500/90 hover:bg-red-600 shadow-lg"
                 disabled={isDeleting}
               >
                 {isDeleting ? (
-                  <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-current inline-block"></span>
+                  <Spinner className="h-3 w-3" />
                 ) : (
                   <Trash2 className="w-4 h-4" />
                 )}
@@ -254,7 +314,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
           {isEditing ? (
             <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
               <div>
-                <label className="text-xs font-medium mb-1 block">Description</label>
+                <Label className="text-xs font-medium mb-1 block">Description</Label>
                 <Textarea
                   value={editData.description}
                   onChange={(e) => setEditData({ ...editData, description: e.target.value })}
@@ -263,7 +323,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium mb-1 block">Cuisine Type</label>
+                <Label className="text-xs font-medium mb-1 block">Cuisine Type</Label>
                 <Input
                   value={editData.cuisineType}
                   onChange={(e) => setEditData({ ...editData, cuisineType: e.target.value })}
@@ -272,7 +332,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium mb-1 block">Ingredients (one per line, with amounts)</label>
+                <Label className="text-xs font-medium mb-1 block">Ingredients (one per line, with amounts)</Label>
                 <Textarea
                   value={editData.ingredients}
                   onChange={(e) => setEditData({ ...editData, ingredients: e.target.value })}
@@ -281,7 +341,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium mb-1 block">Instructions</label>
+                <Label className="text-xs font-medium mb-1 block">Instructions</Label>
                 <Textarea
                   value={editData.instructions}
                   onChange={(e) => setEditData({ ...editData, instructions: e.target.value })}
@@ -290,7 +350,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium mb-1 block">Tags</label>
+                <Label className="text-xs font-medium mb-1 block">Tags</Label>
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {tags.map((tag, index) => (
                     <Badge
@@ -299,39 +359,48 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
                       className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-700"
                     >
                       {tag}
-                      <button
+                      <Button
                         onClick={() => handleRemoveTag(tag)}
-                        className="ml-1.5 hover:text-red-600"
+                        variant="ghost"
+                        size="sm"
+                        className="ml-1.5 h-auto p-0 hover:text-red-600"
                       >
                         ×
-                      </button>
+                      </Button>
                     </Badge>
                   ))}
                 </div>
-                <form onSubmit={handleAddTag} className="flex gap-1">
-                  <input
-                    type="text"
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    placeholder="Add tag..."
-                    className="flex-1 text-xs px-2 py-1 border rounded-md"
-                  />
-                  <button
-                    type="submit"
-                    className="px-2 py-1 text-xs bg-orange-500 text-white rounded-md hover:bg-orange-600"
-                  >
-                    Add
-                  </button>
-                </form>
+                <Form {...tagForm}>
+                  <form onSubmit={tagForm.handleSubmit(handleAddTag)} onClick={(e) => e.stopPropagation()} className="flex gap-1">
+                    <FormField
+                      control={tagForm.control}
+                      name="tag"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input
+                              type="text"
+                              placeholder="Add tag..."
+                              className="flex-1 text-xs h-8"
+                              {...field}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      type="submit"
+                      size="sm"
+                      className="px-2 py-1 text-xs bg-orange-500 hover:bg-orange-600"
+                    >
+                      Add
+                    </Button>
+                  </form>
+                </Form>
               </div>
               <div className="space-y-2 pt-2">
                 {isSaving && (
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-                    <div 
-                      className="bg-orange-500 h-2 rounded-full transition-all duration-300 ease-out"
-                      style={{ width: `${saveProgress}%` }}
-                    />
-                  </div>
+                  <Progress value={saveProgress} className="h-2" />
                 )}
                 <div className="flex gap-2">
                   <Button 
@@ -342,7 +411,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
                   >
                     {isSaving ? (
                       <>
-                        <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-current mr-1 inline-block"></span>
+                        <Spinner className="h-3 w-3 mr-1" />
                         {saveProgress < 100 ? `Saving... ${saveProgress}%` : 'Saving...'}
                       </>
                     ) : (
@@ -403,6 +472,44 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         open={showRecipeDialog}
         onOpenChange={setShowRecipeDialog}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Recipe</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{recipe.dishName}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Error Dialog */}
+      <AlertDialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Error</AlertDialogTitle>
+            <AlertDialogDescription>
+              {errorMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowErrorDialog(false)}>
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

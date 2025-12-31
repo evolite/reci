@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { prisma } from '../lib/prisma';
 import { hashPassword, verifyPassword, generateToken, generateVerificationToken, generateResetToken } from '../services/authService';
 import { authenticate, AuthRequest } from '../middleware/auth';
@@ -7,8 +8,74 @@ import { validateEmail, validatePassword, normalizeEmail } from '../utils/valida
 
 const router = Router();
 
+// Rate limiters
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per window
+  message: 'Too many login attempts, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // 3 attempts per hour
+  message: 'Too many registration attempts, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // 3 attempts per hour
+  message: 'Too many password reset requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Account lockout tracking (in-memory, consider moving to Redis in production)
+interface LockoutInfo {
+  attempts: number;
+  lockedUntil: Date | null;
+}
+
+const accountLockouts = new Map<string, LockoutInfo>();
+
+function isAccountLocked(email: string): boolean {
+  const lockout = accountLockouts.get(email);
+  if (!lockout) return false;
+  
+  if (lockout.lockedUntil && lockout.lockedUntil > new Date()) {
+    return true;
+  }
+  
+  // Clear expired lockout
+  if (lockout.lockedUntil && lockout.lockedUntil <= new Date()) {
+    accountLockouts.delete(email);
+  }
+  
+  return false;
+}
+
+function recordFailedLoginAttempt(email: string): void {
+  const lockout = accountLockouts.get(email) || { attempts: 0, lockedUntil: null };
+  lockout.attempts += 1;
+  
+  if (lockout.attempts >= 5) {
+    const lockoutUntil = new Date();
+    lockoutUntil.setMinutes(lockoutUntil.getMinutes() + 15); // Lock for 15 minutes
+    lockout.lockedUntil = lockoutUntil;
+  }
+  
+  accountLockouts.set(email, lockout);
+}
+
+function clearLoginAttempts(email: string): void {
+  accountLockouts.delete(email);
+}
+
 // POST /api/auth/register - Register new user (requires valid invite token, first user becomes admin)
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', registerLimiter, async (req: Request, res: Response) => {
   try {
     const { email, password, name, inviteToken } = req.body;
 
@@ -101,7 +168,7 @@ router.post('/register', async (req: Request, res: Response) => {
 });
 
 // POST /api/auth/login - Login (verify credentials, return token)
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', loginLimiter, async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
@@ -117,20 +184,36 @@ router.post('/login', async (req: Request, res: Response) => {
 
     const normalizedEmail = normalizeEmail(email);
 
+    // Check if account is locked
+    if (isAccountLocked(normalizedEmail)) {
+      const lockout = accountLockouts.get(normalizedEmail);
+      const minutesRemaining = lockout?.lockedUntil 
+        ? Math.ceil((lockout.lockedUntil.getTime() - new Date().getTime()) / 60000)
+        : 15;
+      return res.status(423).json({ 
+        error: `Account locked due to too many failed attempts. Please try again in ${minutesRemaining} minute(s).` 
+      });
+    }
+
     // Find user
     const user = await prisma.user.findUnique({
       where: { email: normalizedEmail },
     });
 
     if (!user) {
+      recordFailedLoginAttempt(normalizedEmail);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     // Verify password
     const isValidPassword = await verifyPassword(password, user.passwordHash);
     if (!isValidPassword) {
+      recordFailedLoginAttempt(normalizedEmail);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
+
+    // Clear failed attempts on successful login
+    clearLoginAttempts(normalizedEmail);
 
     // Generate JWT token
     const token = generateToken(user.id);
@@ -198,7 +281,7 @@ router.post('/verify-email', async (req: Request, res: Response) => {
 });
 
 // POST /api/auth/forgot-password - Request password reset (generate token, store in DB)
-router.post('/forgot-password', async (req: Request, res: Response) => {
+router.post('/forgot-password', forgotPasswordLimiter, async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
 
@@ -256,29 +339,38 @@ router.post('/reset-password', async (req: Request, res: Response) => {
       return res.status(400).json({ error: passwordValidation.error });
     }
 
-    const user = await prisma.user.findFirst({
-      where: {
-        passwordResetToken: token,
-        passwordResetExpires: {
-          gt: new Date(), // Token not expired
+    // Use transaction to ensure atomic token invalidation
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findFirst({
+        where: {
+          passwordResetToken: token,
+          passwordResetExpires: {
+            gt: new Date(), // Token not expired
+          },
         },
-      },
+      });
+
+      if (!user) {
+        return null;
+      }
+
+      const passwordHash = await hashPassword(newPassword);
+
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          passwordHash,
+          passwordResetToken: null,
+          passwordResetExpires: null,
+        },
+      });
+
+      return user;
     });
 
-    if (!user) {
+    if (!result) {
       return res.status(400).json({ error: 'Invalid or expired reset token' });
     }
-
-    const passwordHash = await hashPassword(newPassword);
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        passwordHash,
-        passwordResetToken: null,
-        passwordResetExpires: null,
-      },
-    });
 
     res.json({ message: 'Password reset successfully' });
   } catch (error) {
