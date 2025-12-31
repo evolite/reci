@@ -6,6 +6,7 @@ import { prisma } from '../lib/prisma';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { analyzeAndUpdateRecipe, prepareUpdateData } from './recipeHelpers';
 import { validateVideoUrl } from '../utils/validation';
+import { handleRouteError, validateString, validateArray } from '../utils/errorHandler';
 
 const router = Router();
 
@@ -28,8 +29,7 @@ router.get('/public', async (req: Request, res: Response) => {
     });
     res.json(recipes);
   } catch (error) {
-    console.error('Error fetching public recipes:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    handleRouteError(error, res, 'fetching public recipes');
   }
 });
 
@@ -117,12 +117,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 
     res.status(201).json(recipe);
   } catch (error) {
-    console.error('Error creating recipe:', error);
-    if (error instanceof Error) {
-      res.status(500).json({ error: error.message });
-    } else {
-      res.status(500).json({ error: 'Internal server error' });
-    }
+    handleRouteError(error, res, 'creating recipe');
   }
 });
 
@@ -134,8 +129,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     });
     res.json(recipes);
   } catch (error) {
-    console.error('Error fetching recipes:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    handleRouteError(error, res, 'fetching recipes');
   }
 });
 
@@ -174,8 +168,7 @@ router.get('/search', async (req: AuthRequest, res: Response) => {
 
     res.json(filteredRecipes);
   } catch (error) {
-    console.error('Error searching recipes:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    handleRouteError(error, res, 'searching recipes');
   }
 });
 
@@ -199,8 +192,7 @@ router.get('/random', async (req: AuthRequest, res: Response) => {
 
     res.json(recipe);
   } catch (error) {
-    console.error('Error fetching random recipe:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    handleRouteError(error, res, 'fetching random recipe');
   }
 });
 
@@ -218,8 +210,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 
     res.json(recipe);
   } catch (error) {
-    console.error('Error fetching recipe:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    handleRouteError(error, res, 'fetching recipe');
   }
 });
 
@@ -255,11 +246,7 @@ router.patch('/:id/tags', async (req: AuthRequest, res: Response) => {
 
     res.json(recipe);
   } catch (error) {
-    console.error('Error updating recipe tags:', error);
-    if (error instanceof Error && error.message.includes('Record to update not found')) {
-      return res.status(404).json({ error: 'Recipe not found' });
-    }
-    res.status(500).json({ error: 'Internal server error' });
+    handleRouteError(error, res, 'updating recipe tags');
   }
 });
 
@@ -270,74 +257,46 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
     const { description, dishName, cuisineType, ingredients, instructions, tags } = req.body;
 
     // Validate input fields
-    if (description !== undefined) {
-      if (typeof description !== 'string') {
-        return res.status(400).json({ error: 'description must be a string' });
-      }
-      if (description.length > 10000) {
-        return res.status(400).json({ error: 'description must be 10000 characters or less' });
-      }
+    const descriptionValidation = validateString(description, 'description', 10000);
+    if (!descriptionValidation.valid) {
+      return res.status(400).json({ error: descriptionValidation.error });
     }
 
-    if (dishName !== undefined) {
-      if (typeof dishName !== 'string') {
-        return res.status(400).json({ error: 'dishName must be a string' });
-      }
-      if (dishName.length === 0) {
-        return res.status(400).json({ error: 'dishName cannot be empty' });
-      }
-      if (dishName.length > 200) {
-        return res.status(400).json({ error: 'dishName must be 200 characters or less' });
-      }
+    const dishNameValidation = validateString(dishName, 'dishName', 200, 1);
+    if (!dishNameValidation.valid) {
+      return res.status(400).json({ error: dishNameValidation.error });
     }
 
-    if (cuisineType !== undefined) {
-      if (typeof cuisineType !== 'string') {
-        return res.status(400).json({ error: 'cuisineType must be a string' });
-      }
-      if (cuisineType.length > 100) {
-        return res.status(400).json({ error: 'cuisineType must be 100 characters or less' });
-      }
+    const cuisineTypeValidation = validateString(cuisineType, 'cuisineType', 100);
+    if (!cuisineTypeValidation.valid) {
+      return res.status(400).json({ error: cuisineTypeValidation.error });
     }
 
-    if (ingredients !== undefined) {
-      if (!Array.isArray(ingredients)) {
-        return res.status(400).json({ error: 'ingredients must be an array' });
-      }
-      if (ingredients.length > 500) {
-        return res.status(400).json({ error: 'ingredients array must have 500 items or less' });
-      }
-      for (const ingredient of ingredients) {
-        if (typeof ingredient !== 'string') {
-          return res.status(400).json({ error: 'All ingredients must be strings' });
-        }
-      }
+    const ingredientsValidation = validateArray(
+      ingredients,
+      'ingredients',
+      500,
+      (item) => validateString(item, 'ingredient', undefined, 0)
+    );
+    if (!ingredientsValidation.valid) {
+      return res.status(400).json({ error: ingredientsValidation.error });
     }
 
     if (instructions !== undefined && instructions !== null) {
-      if (typeof instructions !== 'string') {
-        return res.status(400).json({ error: 'instructions must be a string or null' });
-      }
-      if (instructions.length > 50000) {
-        return res.status(400).json({ error: 'instructions must be 50000 characters or less' });
+      const instructionsValidation = validateString(instructions, 'instructions', 50000);
+      if (!instructionsValidation.valid) {
+        return res.status(400).json({ error: instructionsValidation.error });
       }
     }
 
-    if (tags !== undefined) {
-      if (!Array.isArray(tags)) {
-        return res.status(400).json({ error: 'tags must be an array' });
-      }
-      if (tags.length > 50) {
-        return res.status(400).json({ error: 'tags array must have 50 items or less' });
-      }
-      for (const tag of tags) {
-        if (typeof tag !== 'string') {
-          return res.status(400).json({ error: 'All tags must be strings' });
-        }
-        if (tag.length > 50) {
-          return res.status(400).json({ error: 'Each tag must be 50 characters or less' });
-        }
-      }
+    const tagsValidation = validateArray(
+      tags,
+      'tags',
+      50,
+      (item) => validateString(item, 'tag', 50, 0)
+    );
+    if (!tagsValidation.valid) {
+      return res.status(400).json({ error: tagsValidation.error });
     }
 
     // Get existing recipe to check if instructions changed
@@ -417,11 +376,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
 
     res.json(recipe);
   } catch (error) {
-    console.error('Error updating recipe:', error);
-    if (error instanceof Error && error.message.includes('Record to update not found')) {
-      return res.status(404).json({ error: 'Recipe not found' });
-    }
-    res.status(500).json({ error: 'Internal server error' });
+    handleRouteError(error, res, 'updating recipe', 'Internal server error');
   }
 });
 
@@ -482,12 +437,7 @@ router.post('/:id/rescrape', async (req: AuthRequest, res: Response) => {
 
     res.json(recipe);
   } catch (error) {
-    console.error('Error re-scraping recipe:', error);
-    if (error instanceof Error) {
-      res.status(500).json({ error: error.message });
-    } else {
-      res.status(500).json({ error: 'Internal server error' });
-    }
+    handleRouteError(error, res, 're-scraping recipe');
   }
 });
 
@@ -577,12 +527,7 @@ router.post('/:id/rescrape-and-analyze', async (req: AuthRequest, res: Response)
 
     res.json(recipe);
   } catch (error) {
-    console.error('Error re-scraping and analyzing recipe:', error);
-    if (error instanceof Error) {
-      res.status(500).json({ error: error.message });
-    } else {
-      res.status(500).json({ error: 'Internal server error' });
-    }
+    handleRouteError(error, res, 're-scraping and analyzing recipe');
   }
 });
 
@@ -632,12 +577,7 @@ router.post('/:id/analyze-vision', async (req: AuthRequest, res: Response) => {
 
     res.json(recipe);
   } catch (error) {
-    console.error('Error analyzing recipe with vision:', error);
-    if (error instanceof Error) {
-      res.status(500).json({ error: error.message });
-    } else {
-      res.status(500).json({ error: 'Internal server error' });
-    }
+    handleRouteError(error, res, 'analyzing recipe with vision');
   }
 });
 
@@ -666,11 +606,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
 
     res.status(204).send();
   } catch (error) {
-    console.error('Error deleting recipe:', error);
-    if (error instanceof Error && error.message.includes('Record to delete does not exist')) {
-      return res.status(404).json({ error: 'Recipe not found' });
-    }
-    res.status(500).json({ error: 'Internal server error' });
+    handleRouteError(error, res, 'deleting recipe');
   }
 });
 
@@ -711,12 +647,7 @@ router.post('/shopping-list', async (req: AuthRequest, res: Response) => {
 
     res.json(shoppingList);
   } catch (error) {
-    console.error('Error generating shopping list:', error);
-    if (error instanceof Error) {
-      res.status(500).json({ error: error.message });
-    } else {
-      res.status(500).json({ error: 'Internal server error' });
-    }
+    handleRouteError(error, res, 'generating shopping list');
   }
 });
 

@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { AuthRequest, authenticate, requireAdmin } from '../middleware/auth';
 import { clearModelCache } from '../services/openaiService';
+import { handleRouteError } from '../utils/errorHandler';
 
 const router = Router();
 
@@ -24,8 +25,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     
     res.json(settingsObj);
   } catch (error) {
-    console.error('Error fetching settings:', error);
-    res.status(500).json({ error: 'Failed to fetch settings' });
+    handleRouteError(error, res, 'fetching settings', 'Failed to fetch settings');
   }
 });
 
@@ -43,8 +43,7 @@ router.get('/:key', async (req: AuthRequest, res: Response) => {
     
     res.json({ key: setting.key, value: setting.value, description: setting.description });
   } catch (error) {
-    console.error('Error fetching setting:', error);
-    res.status(500).json({ error: 'Failed to fetch setting' });
+    handleRouteError(error, res, 'fetching setting', 'Failed to fetch setting');
   }
 });
 
@@ -78,8 +77,7 @@ router.put('/:key', async (req: AuthRequest, res: Response) => {
     
     res.json({ key: setting.key, value: setting.value, description: setting.description });
   } catch (error) {
-    console.error('Error updating setting:', error);
-    res.status(500).json({ error: 'Failed to update setting' });
+    handleRouteError(error, res, 'updating setting', 'Failed to update setting');
   }
 });
 

@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { ShoppingCartRequest, ShoppingCartResponse, SharedCartResponse, ShareCartResponse } from '../models/ShoppingCart';
 import { randomUUID } from 'node:crypto';
+import { handleRouteError, validateArray } from '../utils/errorHandler';
 
 // Authenticated routes
 const router = Router();
@@ -35,8 +36,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 
     res.json(response);
   } catch (error) {
-    console.error('Error fetching shopping cart:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    handleRouteError(error, res, 'fetching shopping cart');
   }
 });
 
@@ -79,8 +79,7 @@ router.put('/', async (req: AuthRequest, res: Response) => {
 
     res.json(response);
   } catch (error) {
-    console.error('Error saving shopping cart:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    handleRouteError(error, res, 'saving shopping cart');
   }
 });
 
@@ -95,11 +94,7 @@ router.delete('/', async (req: AuthRequest, res: Response) => {
 
     res.status(204).send();
   } catch (error) {
-    console.error('Error deleting shopping cart:', error);
-    if (error instanceof Error && error.message.includes('Record to delete does not exist')) {
-      return res.status(404).json({ error: 'Shopping cart not found' });
-    }
-    res.status(500).json({ error: 'Internal server error' });
+    handleRouteError(error, res, 'deleting shopping cart');
   }
 });
 
@@ -133,8 +128,7 @@ router.post('/share', async (req: AuthRequest, res: Response) => {
 
     res.json(response);
   } catch (error) {
-    console.error('Error sharing shopping cart:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    handleRouteError(error, res, 'sharing shopping cart');
   }
 });
 
@@ -150,8 +144,7 @@ router.delete('/share', async (req: AuthRequest, res: Response) => {
 
     res.status(204).send();
   } catch (error) {
-    console.error('Error unsharing shopping cart:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    handleRouteError(error, res, 'unsharing shopping cart');
   }
 });
 
@@ -191,8 +184,7 @@ publicRouter.get('/shared/:shareToken', async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (error) {
-    console.error('Error fetching shared cart:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    handleRouteError(error, res, 'fetching shared cart');
   }
 });
 
@@ -203,22 +195,22 @@ publicRouter.put('/shared/:shareToken', sharedCartLimiter, async (req: Request, 
     const { checkedItems } = req.body;
 
     // Validate checkedItems
-    if (!Array.isArray(checkedItems)) {
-      return res.status(400).json({ error: 'checkedItems must be an array' });
-    }
-
-    if (checkedItems.length > 1000) {
-      return res.status(400).json({ error: 'checkedItems array must have 1000 items or less' });
-    }
-
-    // Validate each item format: "sectionIndex-ingredientIndex"
-    for (const item of checkedItems) {
-      if (typeof item !== 'string') {
-        return res.status(400).json({ error: 'All checkedItems must be strings' });
+    const checkedItemsValidation = validateArray(
+      checkedItems,
+      'checkedItems',
+      1000,
+      (item) => {
+        if (typeof item !== 'string') {
+          return { valid: false, error: 'All checkedItems must be strings' };
+        }
+        if (!/^\d+-\d+$/.test(item)) {
+          return { valid: false, error: 'Each checkedItem must match format "sectionIndex-ingredientIndex"' };
+        }
+        return { valid: true };
       }
-      if (!/^\d+-\d+$/.test(item)) {
-        return res.status(400).json({ error: 'Each checkedItem must match format "sectionIndex-ingredientIndex"' });
-      }
+    );
+    if (!checkedItemsValidation.valid) {
+      return res.status(400).json({ error: checkedItemsValidation.error });
     }
 
     const cart = await prisma.shoppingCart.findUnique({
@@ -239,8 +231,7 @@ publicRouter.put('/shared/:shareToken', sharedCartLimiter, async (req: Request, 
 
     res.status(204).send();
   } catch (error) {
-    console.error('Error updating shared cart:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    handleRouteError(error, res, 'updating shared cart');
   }
 });
 
