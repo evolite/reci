@@ -53,8 +53,9 @@ export function findCommentsInObject(obj: any, depth = 0): string[] {
   } else if (Array.isArray(obj)) {
     comments.push(...findCommentsInArray(obj, depth));
   } else if (obj && typeof obj === 'object') {
-    comments.push(...extractCommentFromObject(obj));
-    comments.push(...findCommentsInObjectValue(obj, depth + 1));
+    const extractedComments = extractCommentFromObject(obj);
+    const foundComments = findCommentsInObjectValue(obj, depth + 1);
+    comments.push(...extractedComments, ...foundComments);
   }
   
   return comments;

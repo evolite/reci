@@ -309,7 +309,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
         </div>
         <CardHeader className="p-3 sm:p-4 sm:p-6">
           {isEditing ? (
-            <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+            <div className="space-y-2" onKeyDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
               <Input
                 value={editData.dishName}
                 onChange={(e) => setEditData({ ...editData, dishName: e.target.value })}
@@ -330,7 +330,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
         </CardHeader>
         <CardContent className="p-3 sm:p-4 sm:p-6 pt-0 space-y-3">
           {isEditing ? (
-            <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+            <div className="space-y-3" onKeyDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
               <div>
                 <Label className="text-xs font-medium mb-1 block">Description</Label>
                 <Textarea

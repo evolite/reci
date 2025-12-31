@@ -121,6 +121,16 @@ function createFallbackAnalysis(title: string, description: string): RecipeAnaly
   };
 }
 
+// Type guard function to validate RecipeAnalysis
+function isRecipeAnalysis(obj: unknown): obj is RecipeAnalysis {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'dishName' in obj &&
+    typeof (obj as { dishName: unknown }).dishName === 'string'
+  );
+}
+
 function parseAndValidateResponse(cleanedContent: string, sanitizedTitle: string, sanitizedDescription: string): RecipeAnalysis {
   try {
     const parsed: unknown = JSON.parse(cleanedContent);
@@ -131,8 +141,8 @@ function parseAndValidateResponse(cleanedContent: string, sanitizedTitle: string
     }
     
     // Type guard to ensure parsed is RecipeAnalysis
-    if (typeof parsed === 'object' && parsed !== null && 'dishName' in parsed) {
-      return parsed as RecipeAnalysis;
+    if (isRecipeAnalysis(parsed)) {
+      return parsed;
     }
     
     // Fallback if parsing fails
@@ -320,7 +330,12 @@ Return only the JSON object, no markdown formatting, no code blocks.`;
     // Parse the JSON response
     let analysis: RecipeAnalysis;
     try {
-      analysis = JSON.parse(cleanedContent) as RecipeAnalysis;
+      const parsed: unknown = JSON.parse(cleanedContent);
+      if (isRecipeAnalysis(parsed)) {
+        analysis = parsed;
+      } else {
+        throw new Error('Invalid RecipeAnalysis structure');
+      }
     } catch (parseError) {
       console.error('Failed to parse OpenAI response (from text). Raw content:', cleanedContent.substring(0, 500));
       throw new Error(`Failed to parse JSON response from OpenAI: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
@@ -429,7 +444,12 @@ Return only the JSON object, no markdown formatting, no code blocks.`;
     // Parse the JSON response
     let analysis: RecipeAnalysis;
     try {
-      analysis = JSON.parse(cleanedContent) as RecipeAnalysis;
+      const parsed: unknown = JSON.parse(cleanedContent);
+      if (isRecipeAnalysis(parsed)) {
+        analysis = parsed;
+      } else {
+        throw new Error('Invalid RecipeAnalysis structure');
+      }
     } catch (parseError) {
       console.error('Failed to parse OpenAI response (vision). Raw content:', cleanedContent.substring(0, 500));
       throw new Error(`Failed to parse JSON response from OpenAI: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
