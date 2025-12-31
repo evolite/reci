@@ -166,22 +166,70 @@ function extractCommentsFromHtml(html: string, platform: string | null): string[
   // Other platforms can be added incrementally
   if (platform === 'youtube') {
     try {
-      const ytInitialDataRegex = /var ytInitialData = ({.+?});/s;
-      const ytInitialDataMatch = ytInitialDataRegex.exec(html);
-      if (ytInitialDataMatch) {
-        try {
-          const ytInitialData = JSON.parse(ytInitialDataMatch[1]);
-          const comments = findCommentsInObject(ytInitialData);
-          
-          // Sort by length (longer comments are more likely to contain recipes) and take top 5
-          const sortedComments = comments
-            .filter((c, i, arr) => arr.indexOf(c) === i) // Remove duplicates
-            .sort((a, b) => b.length - a.length)
-            .slice(0, 5);
-          
-          topComments.push(...sortedComments);
-        } catch (parseError) {
-          console.warn('Failed to parse ytInitialData:', parseError);
+      // Use brace counting instead of regex to avoid catastrophic backtracking
+      const startMarker = 'var ytInitialData = ({';
+      const startIndex = html.indexOf(startMarker);
+      if (startIndex !== -1) {
+        // Find the matching closing brace by counting braces
+        let braceCount = 0;
+        let foundStart = false;
+        let jsonStart = -1;
+        let jsonEnd = -1;
+        
+        for (let i = startIndex + startMarker.length - 1; i < Math.min(html.length, startIndex + 1000000); i++) {
+          if (html[i] === '{') {
+            if (!foundStart) {
+              foundStart = true;
+              jsonStart = i;
+            }
+            braceCount++;
+          } else if (html[i] === '}') {
+            braceCount--;
+            if (braceCount === 0 && foundStart) {
+              jsonEnd = i + 1;
+              break;
+            }
+          }
+        }
+        
+        if (jsonStart !== -1 && jsonEnd !== -1) {
+          const jsonStr = html.substring(jsonStart, jsonEnd);
+          try {
+            const ytInitialData = JSON.parse(jsonStr);
+            const comments = findCommentsInObject(ytInitialData);
+            
+            // Sort by length (longer comments are more likely to contain recipes) and take top 5
+            const sortedComments = comments
+              .filter((c, i, arr) => arr.indexOf(c) === i) // Remove duplicates
+              .sort((a, b) => b.length - a.length)
+              .slice(0, 5);
+            
+            topComments.push(...sortedComments);
+          } catch (parseError) {
+            console.warn('Failed to parse ytInitialData:', parseError);
+          }
+        }
+      }
+      
+      // Fallback to bounded regex if brace counting fails
+      if (topComments.length === 0) {
+        const ytInitialDataRegex = /var ytInitialData = (\{[^;]{0,1000000}\});/s;
+        const ytInitialDataMatch = ytInitialDataRegex.exec(html);
+        if (ytInitialDataMatch) {
+          try {
+            const ytInitialData = JSON.parse(ytInitialDataMatch[1]);
+            const comments = findCommentsInObject(ytInitialData);
+            
+            // Sort by length (longer comments are more likely to contain recipes) and take top 5
+            const sortedComments = comments
+              .filter((c, i, arr) => arr.indexOf(c) === i) // Remove duplicates
+              .sort((a, b) => b.length - a.length)
+              .slice(0, 5);
+            
+            topComments.push(...sortedComments);
+          } catch (parseError) {
+            console.warn('Failed to parse ytInitialData:', parseError);
+          }
         }
       }
     } catch (commentError) {
@@ -482,15 +530,63 @@ function extractFromInstagramSharedData(
   thumbnailUrl: string
 ): { description: string; thumbnailUrl: string } {
   let result = { description, thumbnailUrl };
-  const sharedDataRegex = /window\._sharedData\s*=\s*({.+?});/;
-  const sharedDataMatch = sharedDataRegex.exec(html);
+  // Use brace counting instead of regex to avoid catastrophic backtracking
+  const startMarker = 'window._sharedData';
+  const startIndex = html.indexOf(startMarker);
+  let jsonStr: string | null = null;
   
-  if (!sharedDataMatch) {
+  if (startIndex !== -1) {
+    // Find the assignment and then count braces
+    const assignIndex = html.indexOf('=', startIndex);
+    if (assignIndex !== -1) {
+      // Find the opening brace
+      let braceStart = -1;
+      for (let i = assignIndex; i < Math.min(html.length, assignIndex + 1000); i++) {
+        if (html[i] === '{') {
+          braceStart = i;
+          break;
+        }
+      }
+      
+      if (braceStart !== -1) {
+        // Count braces to find the matching closing brace
+        let braceCount = 0;
+        let jsonEnd = -1;
+        
+        for (let i = braceStart; i < Math.min(html.length, braceStart + 1000000); i++) {
+          if (html[i] === '{') {
+            braceCount++;
+          } else if (html[i] === '}') {
+            braceCount--;
+            if (braceCount === 0) {
+              jsonEnd = i + 1;
+              break;
+            }
+          }
+        }
+        
+        if (jsonEnd !== -1) {
+          jsonStr = html.substring(braceStart, jsonEnd);
+        }
+      }
+    }
+  }
+  
+  // Fallback to bounded regex if brace counting fails
+  if (!jsonStr) {
+    const sharedDataRegex = /window\._sharedData\s*=\s*(\{[^;]{0,1000000}\});/;
+    const sharedDataMatch = sharedDataRegex.exec(html);
+    if (sharedDataMatch) {
+      jsonStr = sharedDataMatch[1];
+    }
+  }
+  
+  if (!jsonStr) {
     return result;
   }
   
   try {
-    const sharedData = JSON.parse(sharedDataMatch[1]);
+    const sharedData = JSON.parse(jsonStr);
     const entryData = sharedData?.entry_data;
     if (!entryData) {
       return result;

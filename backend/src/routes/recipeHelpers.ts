@@ -11,10 +11,17 @@ export function cleanInstructions(instructions: string): string {
   let cleaned = instructions;
   
   // Remove "Ingredients:" headings and everything until "Instructions:" or "Steps:" or "Method:" or "Directions:"
-  // Use non-greedy quantifier with explicit limit to prevent catastrophic backtracking
-  const ingredientsPattern = /^Ingredients?:?\s*\n.{0,5000}?(?=\n(?:Instructions?|Steps?|Method|Directions?|$))/ims;
-  cleaned = cleaned.replace(ingredientsPattern, '');
-  cleaned = cleaned.replace(/^.{0,5000}?Ingredients?:?\s*\n.{0,5000}?(?=\n(?:Instructions?|Steps?|Method|Directions?|$))/ims, '');
+  // Use negated character classes instead of . to prevent catastrophic backtracking
+  // Limit to first 5000 characters to prevent DoS
+  const maxSearchLength = Math.min(cleaned.length, 5000);
+  const searchSection = cleaned.substring(0, maxSearchLength);
+  const restSection = cleaned.substring(maxSearchLength);
+  
+  // Use negated character class [^\n] instead of . to avoid backtracking issues
+  const ingredientsPattern = /^Ingredients?:?\s*\n[^\n]{0,5000}(?=\n(?:Instructions?|Steps?|Method|Directions?|$))/ims;
+  let cleanedSection = searchSection.replace(ingredientsPattern, '');
+  cleanedSection = cleanedSection.replace(/^[^\n]{0,5000}Ingredients?:?\s*\n[^\n]{0,5000}(?=\n(?:Instructions?|Steps?|Method|Directions?|$))/ims, '');
+  cleaned = cleanedSection + restSection;
   
   // Remove bullet points or numbered lists that look like ingredients (contain measurements)
   // Use more specific patterns with bounded quantifiers to prevent backtracking
