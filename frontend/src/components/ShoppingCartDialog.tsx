@@ -53,7 +53,7 @@ export function ShoppingCartDialog({ open, onOpenChange, recipeIds, onClose, onS
         }
         // Set share URL if cart is shared
         if (currentShoppingCart.shareToken) {
-          setShareUrl(`${window.location.origin}/cart/shared/${currentShoppingCart.shareToken}`);
+          setShareUrl(`${globalThis.location.origin}/cart/shared/${currentShoppingCart.shareToken}`);
         } else {
           setShareUrl(null);
         }
@@ -226,7 +226,7 @@ export function ShoppingCartDialog({ open, onOpenChange, recipeIds, onClose, onS
               {shoppingList.sections.length > 0 ? (
                 <div className="space-y-4">
                   {shoppingList.sections.map((section, sectionIndex) => (
-                    <Card key={sectionIndex}>
+                    <Card key={`section-${section.name}-${sectionIndex}`}>
                       <CardHeader className="pb-3">
                         <CardTitle className="text-lg text-orange-600 dark:text-orange-400">
                           {section.name}
@@ -239,7 +239,7 @@ export function ShoppingCartDialog({ open, onOpenChange, recipeIds, onClose, onS
                             const isChecked = checkedItems.has(itemKey);
                             return (
                               <li 
-                                key={ingredientIndex} 
+                                key={itemKey} 
                                 className={`text-sm flex items-start gap-2 ${isChecked ? 'opacity-60 line-through' : ''}`}
                               >
                                 <Checkbox

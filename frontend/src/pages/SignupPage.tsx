@@ -108,10 +108,10 @@ export function SignupPage() {
       }
     } catch (err) {
       // If check fails but no token, might be first user - allow proceeding
-      if (!values.inviteToken.trim()) {
-        setStep('register');
-      } else {
+      if (values.inviteToken.trim()) {
         setError(err instanceof Error ? err.message : 'Failed to validate invite token');
+      } else {
+        setStep('register');
       }
     } finally {
       setLoading(false);

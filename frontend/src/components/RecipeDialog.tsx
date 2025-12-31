@@ -19,9 +19,9 @@ import { updateRecipe } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface RecipeDialogProps {
-  recipe: Recipe | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  readonly recipe: Recipe | null;
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
 }
 
 export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) {
@@ -113,7 +113,7 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
               <h3 className="font-semibold mb-3 text-lg">Ingredients</h3>
               <ul className="list-none space-y-1 text-sm">
                 {currentRecipe.ingredients.map((ingredient, index) => (
-                  <li key={index} className="flex items-start">
+                  <li key={`${ingredient}-${index}`} className="flex items-start">
                     <span className="mr-2 text-orange-600">•</span>
                     <span>{ingredient}</span>
                   </li>
@@ -136,9 +136,9 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
                   // If we got multiple lines, use them
                   if (steps.length > 1) {
                     return steps.map((step, index) => {
-                      const cleanStep = step.replace(/^\d+[\.\)]\s*/, '').trim();
+                      const cleanStep = step.replace(/^\d+[.)]\s*/, '').trim();
                       return (
-                        <li key={index} className="flex items-start">
+                        <li key={`${cleanStep}-${index}`} className="flex items-start">
                           <span className="mr-3 text-orange-600 font-semibold min-w-[24px]">{index + 1}.</span>
                           <span className="flex-1">{cleanStep}</span>
                         </li>
@@ -148,12 +148,12 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
                   
                   // If single line, try to split by numbered patterns (1., 2., 3., etc.)
                   // Pattern: number followed by period or parenthesis, then space
-                  const numberedPattern = /(\d+[\.\)]\s+)/g;
+                  const numberedPattern = /(\d+[.)]\s+)/g;
                   const matches = [...instructions.matchAll(numberedPattern)];
                   
                   if (matches.length > 1) {
                     // Split by the numbered pattern
-                    steps = instructions.split(/(\d+[\.\)]\s+)/).filter((part) => part.trim().length > 0);
+                    steps = instructions.split(/(\d+[.)]\s+)/).filter((part) => part.trim().length > 0);
                     
                     // Group number and text together
                     const groupedSteps: string[] = [];
@@ -166,9 +166,9 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
                     }
                     
                     return groupedSteps.map((step, index) => {
-                      const cleanStep = step.replace(/^\d+[\.\)]\s*/, '').trim();
+                      const cleanStep = step.replace(/^\d+[.)]\s*/, '').trim();
                       return (
-                        <li key={index} className="flex items-start">
+                        <li key={`${cleanStep}-${index}`} className="flex items-start">
                           <span className="mr-3 text-orange-600 font-semibold min-w-[24px]">{index + 1}.</span>
                           <span className="flex-1">{cleanStep}</span>
                         </li>
@@ -182,7 +182,7 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
                   return steps.map((step, index) => {
                     const cleanStep = step.replace(/^\d+[\.\)]\s*/, '').trim();
                     return (
-                      <li key={index} className="flex items-start">
+                      <li key={`${cleanStep}-${index}`} className="flex items-start">
                         <span className="mr-3 text-orange-600 font-semibold min-w-[24px]">{index + 1}.</span>
                         <span className="flex-1">{cleanStep}</span>
                       </li>

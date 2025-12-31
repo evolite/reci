@@ -2,9 +2,9 @@ import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 
 interface SearchBarProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
+  readonly value: string;
+  readonly onChange: (value: string) => void;
+  readonly placeholder?: string;
 }
 
 export function SearchBar({ value, onChange, placeholder = 'Search recipes...' }: SearchBarProps) {

@@ -4,10 +4,10 @@ import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from '@/
 import { ChefHat } from 'lucide-react';
 
 interface RecipeGridProps {
-  recipes: Recipe[];
-  selectedRecipes: Set<string>;
-  onRecipeSelect: (recipeId: string) => void;
-  onRecipeDeselect: (recipeId: string) => void;
+  readonly recipes: Recipe[];
+  readonly selectedRecipes: Set<string>;
+  readonly onRecipeSelect: (recipeId: string) => void;
+  readonly onRecipeDeselect: (recipeId: string) => void;
 }
 
 export function RecipeGrid({ recipes, selectedRecipes, onRecipeSelect, onRecipeDeselect }: RecipeGridProps) {

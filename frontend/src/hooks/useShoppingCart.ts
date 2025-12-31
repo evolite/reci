@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getShoppingCart, saveShoppingCart as saveCartAPI, deleteShoppingCart as deleteCartAPI, shareShoppingCart as shareCartAPI, unshareShoppingCart as unshareCartAPI, type ShoppingCartRequest } from '@/lib/api';
-import type { ShoppingListResponse } from '@/lib/api';
+import { getShoppingCart, saveShoppingCart as saveCartAPI, deleteShoppingCart as deleteCartAPI, shareShoppingCart as shareCartAPI, unshareShoppingCart as unshareCartAPI, type ShoppingCartRequest, type ShoppingListResponse } from '@/lib/api';
 
 export interface SavedShoppingCart {
   id: string;

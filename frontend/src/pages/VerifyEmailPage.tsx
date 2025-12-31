@@ -46,21 +46,27 @@ export function VerifyEmailPage() {
           <CardDescription>Verifying your email address</CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="text-center py-4">Verifying...</div>
-          ) : success ? (
-            <Alert>
-              <CheckCircle2 className="h-4 w-4" />
-              <AlertDescription>
-                Your email has been verified successfully!
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error || 'Failed to verify email'}</AlertDescription>
-            </Alert>
-          )}
+          {(() => {
+            if (loading) {
+              return <div className="text-center py-4">Verifying...</div>;
+            }
+            if (success) {
+              return (
+                <Alert>
+                  <CheckCircle2 className="h-4 w-4" />
+                  <AlertDescription>
+                    Your email has been verified successfully!
+                  </AlertDescription>
+                </Alert>
+              );
+            }
+            return (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error || 'Failed to verify email'}</AlertDescription>
+              </Alert>
+            );
+          })()}
           <div className="mt-4 text-center">
             <Link to="/login" className="text-sm text-muted-foreground hover:underline">
               Back to login

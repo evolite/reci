@@ -37,7 +37,7 @@ export function AdminSettingsPage() {
   const [openaiModel, setOpenaiModel] = useState('gpt-5-mini');
 
   useEffect(() => {
-    if (!user || !user.isAdmin) {
+    if (!user?.isAdmin) {
       navigate('/');
       return;
     }

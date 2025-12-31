@@ -27,10 +27,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { RecipeDialog } from './RecipeDialog';
 
 interface RecipeCardProps {
-  recipe: Recipe;
-  isSelected?: boolean;
-  onSelect?: (recipeId: string) => void;
-  onDeselect?: (recipeId: string) => void;
+  readonly recipe: Recipe;
+  readonly isSelected?: boolean;
+  readonly onSelect?: (recipeId: string) => void;
+  readonly onDeselect?: (recipeId: string) => void;
 }
 
 interface TagFormValues {
@@ -203,10 +203,14 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
     }
   };
 
-  const handleCheckboxChange = (checked: boolean) => {
-    if (checked && onSelect) {
+  const handleSelect = () => {
+    if (onSelect) {
       onSelect(recipe.id);
-    } else if (!checked && onDeselect) {
+    }
+  };
+
+  const handleDeselect = () => {
+    if (onDeselect) {
       onDeselect(recipe.id);
     }
   };
@@ -236,11 +240,24 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
               </div>
               <div
                 onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.stopPropagation();
+                  }
+                }}
+                role="button"
+                tabIndex={0}
                 className="absolute top-2 left-2 bg-white/90 hover:bg-white dark:bg-gray-800/90 dark:hover:bg-gray-800 shadow-lg rounded-md p-1"
               >
                 <Checkbox
                   checked={isSelected}
-                  onCheckedChange={handleCheckboxChange}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      handleSelect();
+                    } else {
+                      handleDeselect();
+                    }
+                  }}
                   className="h-6 w-6 border-2 border-gray-300 dark:border-gray-600 data-[state=checked]:bg-orange-500/80 data-[state=checked]:border-orange-500/80 data-[state=checked]:text-white"
                   aria-label={isSelected ? 'Deselect recipe' : 'Select recipe'}
                 />
@@ -352,9 +369,9 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
               <div>
                 <Label className="text-xs font-medium mb-1 block">Tags</Label>
                 <div className="flex flex-wrap gap-1.5 mb-2">
-                  {tags.map((tag, index) => (
+                  {tags.map((tag) => (
                     <Badge
-                      key={index}
+                      key={tag}
                       variant="outline"
                       className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-700"
                     >

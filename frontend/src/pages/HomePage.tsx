@@ -221,7 +221,15 @@ export function HomePage() {
         <ShoppingCartDialog
           open={showShoppingCartDialog}
           onOpenChange={setShowShoppingCartDialog}
-          recipeIds={currentShoppingCart ? currentShoppingCart.recipeIds : (pendingRecipeIds.length > 0 ? pendingRecipeIds : Array.from(selectedRecipes))}
+          recipeIds={(() => {
+            if (currentShoppingCart) {
+              return currentShoppingCart.recipeIds;
+            }
+            if (pendingRecipeIds.length > 0) {
+              return pendingRecipeIds;
+            }
+            return Array.from(selectedRecipes);
+          })()}
           onClose={() => {
             setShowShoppingCartDialog(false);
             setSelectedRecipes(new Set());

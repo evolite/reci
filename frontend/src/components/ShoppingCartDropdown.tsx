@@ -3,7 +3,7 @@ import { ShoppingCart } from 'lucide-react';
 import { useShoppingCart, type SavedShoppingCart } from '@/hooks/useShoppingCart';
 
 interface ShoppingCartDropdownProps {
-  onSelectCart: (cart: SavedShoppingCart) => void;
+  readonly onSelectCart: (cart: SavedShoppingCart) => void;
 }
 
 export function ShoppingCartDropdown({ onSelectCart }: ShoppingCartDropdownProps) {

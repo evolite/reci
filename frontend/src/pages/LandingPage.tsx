@@ -75,9 +75,7 @@ export function LandingPage() {
     };
     const handleMouseLeave = () => {
       isPaused = false;
-      if (animationId === null) {
-        animationId = requestAnimationFrame(scroll);
-      }
+      animationId ??= requestAnimationFrame(scroll);
     };
 
     container.addEventListener('mouseenter', handleMouseEnter);
@@ -251,9 +249,9 @@ export function LandingPage() {
                           <span className="text-xs font-medium text-muted-foreground">Tags</span>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
-                          {recipe.tags.slice(0, 6).map((tag, index) => (
+                          {recipe.tags.slice(0, 6).map((tag) => (
                             <Badge
-                              key={index}
+                              key={tag}
                               variant="outline"
                               className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-700"
                             >
@@ -303,9 +301,9 @@ export function LandingPage() {
                           <span className="text-xs font-medium text-muted-foreground">Tags</span>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
-                          {recipe.tags.slice(0, 6).map((tag, index) => (
+                          {recipe.tags.slice(0, 6).map((tag) => (
                             <Badge
-                              key={index}
+                              key={tag}
                               variant="outline"
                               className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-700"
                             >

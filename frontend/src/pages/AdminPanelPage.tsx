@@ -84,7 +84,7 @@ export function AdminPanelPage() {
   });
 
   useEffect(() => {
-    if (!user || !user.isAdmin) {
+    if (!user?.isAdmin) {
       navigate('/');
       return;
     }
@@ -115,7 +115,7 @@ export function AdminPanelPage() {
     setCreating(true);
 
     try {
-      const expiresInDays = values.expires ? parseInt(values.expires) : undefined;
+      const expiresInDays = values.expires ? Number.parseInt(values.expires, 10) : undefined;
       const result = await createInvite(values.email || undefined, expiresInDays);
       setInvites([result.invite, ...invites]);
       setNewlyCreatedInvite(result.invite);
@@ -156,7 +156,7 @@ export function AdminPanelPage() {
   };
 
   const handleCopyLink = (token: string) => {
-    const link = `${window.location.origin}/signup?token=${token}`;
+    const link = `${globalThis.location.origin}/signup?token=${token}`;
     navigator.clipboard.writeText(link);
     setCopiedLink(token);
     setTimeout(() => setCopiedLink(null), 2000);
@@ -381,17 +381,21 @@ export function AdminPanelPage() {
                   <Skeleton key={i} className="h-20 w-full" />
                 ))}
               </div>
-            ) : invites.length === 0 ? (
-              <Empty>
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <Users className="h-6 w-6" />
-                  </EmptyMedia>
-                  <EmptyTitle>No invites</EmptyTitle>
-                  <EmptyDescription>Create your first invite to get started</EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-            ) : (
+            ) : (() => {
+              if (invites.length === 0) {
+                return (
+                  <Empty>
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <Users className="h-6 w-6" />
+                      </EmptyMedia>
+                      <EmptyTitle>No invites</EmptyTitle>
+                      <EmptyDescription>Create your first invite to get started</EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
+                );
+              }
+              return (
               <Card>
                 <CardHeader>
                   <CardTitle>Invites</CardTitle>
@@ -482,7 +486,8 @@ export function AdminPanelPage() {
                   </Table>
                 </CardContent>
               </Card>
-            )}
+              );
+            })()}
           </TabsContent>
 
           <TabsContent value="settings" className="mt-6">

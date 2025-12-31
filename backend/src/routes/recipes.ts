@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getVideoMetadata } from '../services/videoService';
-import { analyzeRecipe, analyzeRecipeWithVision, analyzeRecipeFromText, generateShoppingList } from '../services/openaiService';
+import { analyzeRecipe, analyzeRecipeWithVision, generateShoppingList } from '../services/openaiService';
 import { CreateRecipeInput, ShoppingListRequest } from '../models/Recipe';
 import { prisma } from '../lib/prisma';
 import { authenticate, AuthRequest } from '../middleware/auth';

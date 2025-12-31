@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { getSharedCart, updateSharedCart, type SharedCartResponse } from '@/lib/api';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -9,7 +9,6 @@ import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from '@/components/ui/empty';
 import { ShoppingCart, AlertTriangle } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 export function SharedCartPage() {
   const { shareToken } = useParams<{ shareToken: string }>();
@@ -45,6 +44,7 @@ export function SharedCartPage() {
     if (!shareToken) return;
 
     const key = `${sectionIndex}-${ingredientIndex}`;
+    const previousChecked = new Set(checkedItems);
     const newChecked = new Set(checkedItems);
     
     if (checked) {
@@ -61,7 +61,7 @@ export function SharedCartPage() {
     } catch (err) {
       console.error('Failed to update shared cart:', err);
       // Revert on error
-      setCheckedItems(checkedItems);
+      setCheckedItems(previousChecked);
     } finally {
       setIsUpdating(false);
     }
@@ -148,7 +148,7 @@ export function SharedCartPage() {
           {cart.shoppingList.sections.length > 0 ? (
             <div className="space-y-4">
               {cart.shoppingList.sections.map((section, sectionIndex) => (
-                <Card key={sectionIndex}>
+                <Card key={`section-${section.name}-${sectionIndex}`}>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg text-orange-600 dark:text-orange-400">
                       {section.name}
@@ -161,7 +161,7 @@ export function SharedCartPage() {
                       const isChecked = checkedItems.has(itemKey);
                       return (
                         <li 
-                          key={ingredientIndex} 
+                          key={`${itemKey}-${ingredient}`} 
                           className={`text-sm flex items-start gap-2 ${isChecked ? 'opacity-60 line-through' : ''}`}
                         >
                           <Checkbox

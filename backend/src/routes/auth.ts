@@ -188,7 +188,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
     if (isAccountLocked(normalizedEmail)) {
       const lockout = accountLockouts.get(normalizedEmail);
       const minutesRemaining = lockout?.lockedUntil 
-        ? Math.ceil((lockout.lockedUntil.getTime() - new Date().getTime()) / 60000)
+        ? Math.ceil((Number(lockout.lockedUntil) - Date.now()) / 60000)
         : 15;
       return res.status(423).json({ 
         error: `Account locked due to too many failed attempts. Please try again in ${minutesRemaining} minute(s).` 

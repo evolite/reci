@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 import { login, register, logout, getCurrentUser, checkInvite } from '@/lib/api';
 
 export interface User {
@@ -23,7 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const TOKEN_KEY = 'reci_auth_token';
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: { readonly children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return Date.now() >= exp * 1000;
     } catch (error) {
       // If we can't parse the token, consider it invalid
+      console.debug('Token expiration check failed:', error instanceof Error ? error.message : 'Unknown error');
       return true;
     }
   };
@@ -103,18 +104,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return await checkInvite(token);
   };
 
+  const contextValue = useMemo(() => ({
+    user,
+    token,
+    loading,
+    login: handleLogin,
+    register: handleRegister,
+    logout: handleLogout,
+    checkInvite: handleCheckInvite,
+  }), [user, token, loading, handleLogin, handleRegister, handleLogout, handleCheckInvite]);
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        token,
-        loading,
-        login: handleLogin,
-        register: handleRegister,
-        logout: handleLogout,
-        checkInvite: handleCheckInvite,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

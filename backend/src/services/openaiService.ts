@@ -47,36 +47,21 @@ export function clearModelCache() {
   modelCacheTime = 0;
 }
 
-export async function analyzeRecipe(
-  title: string,
-  description: string,
-  comments?: string[]
-): Promise<RecipeAnalysis> {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY is not set');
+function buildCommentsText(comments: string[]): string {
+  if (comments.length === 0) {
+    return '';
   }
+  const commentsList = comments.map((c, i) => `${i + 1}. ${c}`).join('\n\n');
+  return `\n\nTop Comments from viewers (these often contain full recipes):\n${commentsList}`;
+}
 
-  // Sanitize inputs to prevent prompt injection
-  const sanitizedTitle = sanitizeInput(title, 500);
-  const sanitizedDescription = sanitizeInput(description.substring(0, 2000), 2000);
-  const sanitizedComments = comments && comments.length > 0 
-    ? comments.slice(0, 5).map(c => sanitizeInput(c, 2000))
-    : [];
-
-  // Build comments text to avoid nested template literals
-  const commentsList = sanitizedComments.length > 0
-    ? sanitizedComments.map((c, i) => `${i + 1}. ${c}`).join('\n\n')
-    : '';
-  const commentsText = commentsList
-    ? `\n\nTop Comments from viewers (these often contain full recipes):\n${commentsList}`
-    : '';
-
-  const prompt = `Analyze the following recipe content (from a video, blog post, or recipe website) and extract ALL relevant information. Return ONLY a valid JSON object with no additional text. 
+function buildRecipePrompt(title: string, description: string, commentsText: string): string {
+  return `Analyze the following recipe content (from a video, blog post, or recipe website) and extract ALL relevant information. Return ONLY a valid JSON object with no additional text. 
 
 IMPORTANT: Even if the title or description is minimal or unclear, you MUST still return a valid JSON object with your best guess for the dish name, cuisine type, and ingredients based on what information is available. Do NOT return an error object - always return the required JSON structure.
 
-Title: ${sanitizedTitle}
-Description: ${sanitizedDescription}${commentsText}
+Title: ${title}
+Description: ${description}${commentsText}
 
 IMPORTANT: The description or comments section often contains the FULL RECIPE with ingredients and step-by-step instructions. Pay special attention to text that lists ingredients, measurements, cooking times, temperatures, and step-by-step instructions. Extract the complete recipe text if found.
 
@@ -112,6 +97,91 @@ The suggestedTags array should contain 5-8 relevant tags based on the recipe, co
 The enhancedTitle should be a clear, descriptive title that helps identify the recipe.
 The enhancedDescription should describe the DISH itself - its characteristics, flavors, cooking method, difficulty, time, servings, etc. Do NOT mention the video or anything about watching it. Focus purely on describing the dish.
 Return only the JSON object, no markdown formatting, no code blocks.`;
+}
+
+function cleanOpenAIResponse(content: string): string {
+  let cleanedContent = content.trim();
+  if (cleanedContent.startsWith('```json')) {
+    cleanedContent = cleanedContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+  } else if (cleanedContent.startsWith('```')) {
+    cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+  }
+  return cleanedContent;
+}
+
+function createFallbackAnalysis(title: string, description: string): RecipeAnalysis {
+  return {
+    dishName: title || 'Unknown Dish',
+    cuisineType: 'International',
+    mainIngredients: [],
+    ingredients: [],
+    suggestedTags: [],
+    enhancedTitle: title || 'Unknown Dish',
+    enhancedDescription: description || 'Recipe information will be added later.',
+  };
+}
+
+function parseAndValidateResponse(cleanedContent: string, sanitizedTitle: string, sanitizedDescription: string): RecipeAnalysis {
+  try {
+    const parsed = JSON.parse(cleanedContent) as any;
+    
+    if (parsed.error && !parsed.dishName) {
+      console.warn('OpenAI returned an error object. Creating fallback recipe data from available information.');
+      return createFallbackAnalysis(sanitizedTitle, sanitizedDescription);
+    }
+    
+    return parsed as RecipeAnalysis;
+  } catch (parseError) {
+    console.error('Failed to parse OpenAI response. Raw content:', cleanedContent.substring(0, 500));
+    throw new Error(`Failed to parse JSON response from OpenAI: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+  }
+}
+
+function validateAnalysisStructure(analysis: RecipeAnalysis, sanitizedTitle: string): RecipeAnalysis {
+  if (analysis.dishName && analysis.cuisineType && Array.isArray(analysis.mainIngredients)) {
+    return analysis;
+  }
+  
+  console.error('Invalid OpenAI response structure. Received:', JSON.stringify(analysis, null, 2));
+  
+  const validated = { ...analysis };
+  if (!validated.dishName) {
+    validated.dishName = sanitizedTitle || 'Unknown Dish';
+  }
+  if (!validated.cuisineType) {
+    validated.cuisineType = 'International';
+  }
+  if (!Array.isArray(validated.mainIngredients)) {
+    validated.mainIngredients = [];
+  }
+  
+  console.warn('Using fallback values for missing fields:', {
+    dishName: validated.dishName,
+    cuisineType: validated.cuisineType,
+    mainIngredients: validated.mainIngredients
+  });
+  
+  return validated;
+}
+
+export async function analyzeRecipe(
+  title: string,
+  description: string,
+  comments?: string[]
+): Promise<RecipeAnalysis> {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY is not set');
+  }
+
+  // Sanitize inputs to prevent prompt injection
+  const sanitizedTitle = sanitizeInput(title, 500);
+  const sanitizedDescription = sanitizeInput(description.substring(0, 2000), 2000);
+  const sanitizedComments = comments && comments.length > 0 
+    ? comments.slice(0, 5).map(c => sanitizeInput(c, 2000))
+    : [];
+
+  const commentsText = buildCommentsText(sanitizedComments);
+  const prompt = buildRecipePrompt(sanitizedTitle, sanitizedDescription, commentsText);
 
   try {
     const model = await getOpenAIModel();
@@ -135,61 +205,9 @@ Return only the JSON object, no markdown formatting, no code blocks.`;
       throw new Error('No response from OpenAI');
     }
 
-    // Clean the content - remove markdown code blocks if present
-    let cleanedContent = content.trim();
-    if (cleanedContent.startsWith('```json')) {
-      cleanedContent = cleanedContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-    } else if (cleanedContent.startsWith('```')) {
-      cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
-    }
-
-    // Parse the JSON response
-    let analysis: RecipeAnalysis;
-    try {
-      const parsed = JSON.parse(cleanedContent) as any;
-      
-      // Check if OpenAI returned an error object instead of recipe data
-      if (parsed.error && !parsed.dishName) {
-        console.warn('OpenAI returned an error object. Creating fallback recipe data from available information.');
-        // Create fallback analysis from available metadata
-        analysis = {
-          dishName: sanitizedTitle || 'Unknown Dish',
-          cuisineType: 'International',
-          mainIngredients: [],
-          ingredients: [],
-          suggestedTags: [],
-          enhancedTitle: sanitizedTitle || 'Unknown Dish',
-          enhancedDescription: sanitizedDescription || 'Recipe information will be added later.',
-        };
-      } else {
-        analysis = parsed as RecipeAnalysis;
-      }
-    } catch (parseError) {
-      console.error('Failed to parse OpenAI response. Raw content:', cleanedContent.substring(0, 500));
-      throw new Error(`Failed to parse JSON response from OpenAI: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
-    }
-
-    // Validate the response structure - provide defaults if missing
-    if (!analysis.dishName || !analysis.cuisineType || !Array.isArray(analysis.mainIngredients)) {
-      console.error('Invalid OpenAI response structure. Received:', JSON.stringify(analysis, null, 2));
-      
-      // Provide fallback defaults if OpenAI didn't return proper structure
-      if (!analysis.dishName) {
-        analysis.dishName = sanitizedTitle || 'Unknown Dish';
-      }
-      if (!analysis.cuisineType) {
-        analysis.cuisineType = 'International';
-      }
-      if (!Array.isArray(analysis.mainIngredients)) {
-        analysis.mainIngredients = [];
-      }
-      
-      console.warn('Using fallback values for missing fields:', {
-        dishName: analysis.dishName,
-        cuisineType: analysis.cuisineType,
-        mainIngredients: analysis.mainIngredients
-      });
-    }
+    const cleanedContent = cleanOpenAIResponse(content);
+    let analysis = parseAndValidateResponse(cleanedContent, sanitizedTitle, sanitizedDescription);
+    analysis = validateAnalysisStructure(analysis, sanitizedTitle);
 
     return analysis;
   } catch (error) {

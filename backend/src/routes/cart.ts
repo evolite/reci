@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit';
 import { prisma } from '../lib/prisma';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { ShoppingCartRequest, ShoppingCartResponse, SharedCartResponse, ShareCartResponse } from '../models/ShoppingCart';
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 
 // Authenticated routes
 const router = Router();

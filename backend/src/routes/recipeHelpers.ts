@@ -1,4 +1,3 @@
-import { RecipeAnalysis } from '../models/Recipe';
 import { analyzeRecipeFromText } from '../services/openaiService';
 
 // Helper function to clean instructions text
@@ -12,16 +11,16 @@ export function cleanInstructions(instructions: string): string {
   
   // Remove bullet points or numbered lists that look like ingredients (contain measurements)
   // Simplified regex: removed unnecessary escapes and character class duplicates
-  const measurementUnits = '(?:oz|cup|cups|tbsp|tsp|lb|pound|ounce|fl\\s*oz|g|kg|ml|dl|l)';
-  const bulletPattern = new RegExp(`^[\\s]*[•\\-*]\\s*[\\d/\\s]+${measurementUnits}[\\s\\w\\s,()]+$`, 'gim');
-  cleaned = cleaned.replace(bulletPattern, '');
+  const measurementUnits = String.raw`(?:oz|cup|cups|tbsp|tsp|lb|pound|ounce|fl\s*oz|g|kg|ml|dl|l)`;
+  const bulletPattern = new RegExp(String.raw`^[\s]*[•\-*]\s*[\d/\s]+${measurementUnits}[\s\w\s,()]+$`, 'gim');
+  cleaned = cleaned.replaceAll(bulletPattern, '');
   
   // Remove lines that start with numbers/letters followed by measurements
-  const numberedPattern = new RegExp(`^[\\s]*[\\d\\w]+\\.?\\s+[\\d/\\s]+${measurementUnits}[\\s\\w\\s,()]+$`, 'gim');
-  cleaned = cleaned.replace(numberedPattern, '');
+  const numberedPattern = new RegExp(String.raw`^[\s]*[\d\w]+\.?\s+[\d/\s]+${measurementUnits}[\s\w\s,()]+$`, 'gim');
+  cleaned = cleaned.replaceAll(numberedPattern, '');
   
   // Remove any remaining "Ingredients:" text
-  cleaned = cleaned.replace(/Ingredients?:?\s*/gi, '');
+  cleaned = cleaned.replaceAll(/Ingredients?:?\s*/gi, '');
   return cleaned.trim();
 }
 
@@ -85,7 +84,7 @@ export function prepareUpdateData(
   
   if (body.ingredients !== undefined) {
     if (!Array.isArray(body.ingredients)) {
-      throw new Error('ingredients must be an array');
+      throw new TypeError('ingredients must be an array');
     }
     updateData.ingredients = body.ingredients.filter((ing: any) => typeof ing === 'string' && ing.trim().length > 0);
   }
@@ -97,7 +96,7 @@ export function prepareUpdateData(
   
   if (body.tags !== undefined) {
     if (!Array.isArray(body.tags)) {
-      throw new Error('tags must be an array');
+      throw new TypeError('tags must be an array');
     }
     updateData.tags = body.tags.filter((tag: any) => typeof tag === 'string' && tag.trim().length > 0);
   }

@@ -4,7 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 
 interface AdminRouteProps {
-  children: React.ReactNode;
+  readonly children: React.ReactNode;
 }
 
 export function AdminRoute({ children }: AdminRouteProps) {

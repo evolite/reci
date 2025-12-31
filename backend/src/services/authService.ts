@@ -36,6 +36,7 @@ export function verifyToken(token: string): { userId: string } | null {
     }
     return null;
   } catch (error) {
+    console.debug('Error in authService:', error instanceof Error ? error.message : 'Unknown error');
     return null;
   }
 }

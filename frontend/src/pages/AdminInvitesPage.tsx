@@ -55,7 +55,7 @@ export function AdminInvitesPage() {
   });
 
   useEffect(() => {
-    if (!user || !user.isAdmin) {
+    if (!user?.isAdmin) {
       navigate('/');
       return;
     }
@@ -82,7 +82,7 @@ export function AdminInvitesPage() {
     setCreating(true);
 
     try {
-      const expiresInDays = values.expires ? parseInt(values.expires) : undefined;
+      const expiresInDays = values.expires ? Number.parseInt(values.expires, 10) : undefined;
       const result = await createInvite(values.email || undefined, expiresInDays);
       setInvites([result.invite, ...invites]);
       setNewlyCreatedInvite(result.invite);
@@ -124,7 +124,7 @@ export function AdminInvitesPage() {
   };
 
   const getInviteLink = (token: string) => {
-    const baseUrl = window.location.origin;
+    const baseUrl = globalThis.location.origin;
     return `${baseUrl}/signup?token=${token}`;
   };
 
@@ -414,13 +414,15 @@ export function AdminInvitesPage() {
                         </TableCell>
                         <TableCell>{invite.email || '-'}</TableCell>
                         <TableCell>
-                          {invite.used ? (
-                            <Badge variant="default" className="bg-green-600">Used</Badge>
-                          ) : invite.expired ? (
-                            <Badge variant="destructive">Expired</Badge>
-                          ) : (
-                            <Badge variant="secondary" className="bg-blue-600">Available</Badge>
-                          )}
+                          {(() => {
+                            if (invite.used) {
+                              return <Badge variant="default" className="bg-green-600">Used</Badge>;
+                            }
+                            if (invite.expired) {
+                              return <Badge variant="destructive">Expired</Badge>;
+                            }
+                            return <Badge variant="secondary" className="bg-blue-600">Available</Badge>;
+                          })()}
                         </TableCell>
                         <TableCell>
                           {new Date(invite.createdAt).toLocaleDateString()}

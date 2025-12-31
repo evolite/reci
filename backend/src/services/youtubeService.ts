@@ -44,13 +44,14 @@ function extractMetadataFromHtml(html: string, $: cheerio.CheerioAPI, videoId: s
 
   // Fallback: try to extract from JSON-LD or embedded data
   if (!title || title === 'Untitled') {
-    const titleMatches = [
-      html.match(/"title"\s*:\s*"([^"]+)"/),
-      html.match(/"name"\s*:\s*"([^"]+)"/),
-      html.match(/<title[^>]*>([^<]+)<\/title>/i),
+    const titleRegexes = [
+      /"title"\s*:\s*"([^"]+)"/,
+      /"name"\s*:\s*"([^"]+)"/,
+      /<title[^>]*>([^<]+)<\/title>/i,
     ];
     
-    for (const match of titleMatches) {
+    for (const regex of titleRegexes) {
+      const match = regex.exec(html);
       if (match?.[1] && !match[1].includes('YouTube')) {
         title = match[1].trim();
         break;
@@ -59,12 +60,13 @@ function extractMetadataFromHtml(html: string, $: cheerio.CheerioAPI, videoId: s
   }
 
   if (!description) {
-    const descMatches = [
-      html.match(/"description"\s*:\s*"([^"]+)"/),
-      html.match(/"shortDescription"\s*:\s*"([^"]+)"/),
+    const descRegexes = [
+      /"description"\s*:\s*"([^"]+)"/,
+      /"shortDescription"\s*:\s*"([^"]+)"/,
     ];
     
-    for (const match of descMatches) {
+    for (const regex of descRegexes) {
+      const match = regex.exec(html);
       if (match?.[1]) {
         description = match[1].trim();
         break;
@@ -86,7 +88,8 @@ function extractCommentsFromHtml(html: string): string[] {
   
   try {
     // Try to extract ytInitialData JSON which contains comment data
-    const ytInitialDataMatch = html.match(/var ytInitialData = ({.+?});/s);
+    const ytInitialDataRegex = /var ytInitialData = ({.+?});/s;
+    const ytInitialDataMatch = ytInitialDataRegex.exec(html);
     if (ytInitialDataMatch) {
       try {
         const ytInitialData = JSON.parse(ytInitialDataMatch[1]);

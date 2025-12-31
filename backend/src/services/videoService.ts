@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import { validateVideoUrl } from '../utils/validation';
 
 export interface VideoMetadata {
   title: string;
@@ -121,8 +122,9 @@ function extractMetadataFromContent(html: string, $: ReturnType<typeof cheerio.l
           title = data.headline;
         }
       }
-    } catch {
-      // Ignore JSON parse errors
+    } catch (e) {
+      // Ignore JSON parse errors - invalid JSON is not critical
+      console.debug('Failed to parse JSON data:', e instanceof Error ? e.message : 'Unknown error');
     }
   });
 
@@ -164,7 +166,8 @@ function extractCommentsFromHtml(html: string, platform: string | null): string[
   // Other platforms can be added incrementally
   if (platform === 'youtube') {
     try {
-      const ytInitialDataMatch = html.match(/var ytInitialData = ({.+?});/s);
+      const ytInitialDataRegex = /var ytInitialData = ({.+?});/s;
+      const ytInitialDataMatch = ytInitialDataRegex.exec(html);
       if (ytInitialDataMatch) {
         try {
           const ytInitialData = JSON.parse(ytInitialDataMatch[1]);
@@ -254,10 +257,13 @@ function findCommentsInObject(obj: any, depth = 0): string[] {
   if (typeof obj === 'string' && isRecipeComment(obj)) {
     comments.push(obj);
   } else if (Array.isArray(obj)) {
-    comments.push(...findCommentsInArray(obj, depth));
+    const arrayComments = findCommentsInArray(obj, depth);
+    comments.push(...arrayComments);
   } else if (obj && typeof obj === 'object') {
-    comments.push(...extractCommentFromObject(obj));
-    comments.push(...findCommentsInObjectValue(obj, depth + 1));
+    comments.push(
+      ...extractCommentFromObject(obj),
+      ...findCommentsInObjectValue(obj, depth + 1)
+    );
   }
   
   return comments;
@@ -297,7 +303,7 @@ async function tryOEmbed(videoUrl: string, platform: string | null): Promise<{ t
     if (response.ok) {
       const contentType = response.headers.get('content-type');
       // Check if response is actually JSON
-      if (contentType && contentType.includes('application/json')) {
+      if (contentType?.includes('application/json')) {
         const data = await response.json() as any;
         return {
           title: data.title || data.author_name,
@@ -317,8 +323,237 @@ async function tryOEmbed(videoUrl: string, platform: string | null): Promise<{ t
   return null;
 }
 
+function buildHeaders(platform: string | null): Record<string, string> {
+  const headers: Record<string, string> = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.5',
+  };
+  
+  if (platform === 'tiktok' || platform === 'instagram') {
+    headers['Referer'] = 'https://www.google.com/';
+    headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8';
+  }
+  
+  return headers;
+}
+
+function mergeOEmbedData(
+  oembedData: { title?: string; description?: string; thumbnailUrl?: string } | null,
+  title: string,
+  description: string,
+  thumbnailUrl: string
+): { title: string; description: string; thumbnailUrl: string } {
+  if (!oembedData) {
+    return { title, description, thumbnailUrl };
+  }
+  
+  let mergedTitle = title;
+  let mergedDescription = description;
+  let mergedThumbnail = thumbnailUrl;
+  
+  if (oembedData.title && (!title || title === 'Untitled')) {
+    mergedTitle = oembedData.title;
+  }
+  if (oembedData.description && !description) {
+    mergedDescription = oembedData.description;
+  }
+  if (oembedData.thumbnailUrl && !thumbnailUrl) {
+    mergedThumbnail = oembedData.thumbnailUrl;
+  }
+  
+  return { title: mergedTitle, description: mergedDescription, thumbnailUrl: mergedThumbnail };
+}
+
+function extractImageUrl(image: unknown): string | null {
+  if (!image) return null;
+  const imageUrl = Array.isArray(image) ? image[0] : image;
+  if (typeof imageUrl === 'string') {
+    return imageUrl;
+  }
+  if (imageUrl && typeof imageUrl === 'object' && 'url' in imageUrl) {
+    return (imageUrl as { url: string }).url;
+  }
+  return null;
+}
+
+function extractFromJsonLdRecipe(
+  $: ReturnType<typeof cheerio.load>,
+  title: string,
+  description: string,
+  thumbnailUrl: string
+): { title: string; description: string; thumbnailUrl: string } {
+  let result = { title, description, thumbnailUrl };
+  const jsonLdScripts = $('script[type="application/ld+json"]');
+  
+  jsonLdScripts.each((_, element) => {
+    try {
+      const jsonContent = $(element).html();
+      if (!jsonContent) return;
+      
+      const data = JSON.parse(jsonContent);
+      const items = Array.isArray(data) ? data : [data];
+      
+      for (const item of items) {
+        const itemType = item['@type'];
+        const isRecipe = itemType === 'Recipe' || (Array.isArray(itemType) && itemType.includes('Recipe'));
+        const isArticleOrWebPage = itemType === 'Article' || itemType === 'WebPage';
+        
+        if (isRecipe) {
+          if (item.name && (!result.title || result.title === 'Untitled')) {
+            result.title = item.name;
+          }
+          if (item.description && !result.description) {
+            result.description = item.description;
+          }
+          const imageUrl = extractImageUrl(item.image);
+          if (imageUrl && !result.thumbnailUrl) {
+            result.thumbnailUrl = imageUrl;
+          }
+        }
+        
+        if (isArticleOrWebPage) {
+          if (item.headline && (!result.title || result.title === 'Untitled')) {
+            result.title = item.headline;
+          }
+          if (item.description && !result.description) {
+            result.description = item.description;
+          }
+          const imageUrl = extractImageUrl(item.image);
+          if (imageUrl && !result.thumbnailUrl) {
+            result.thumbnailUrl = imageUrl;
+          }
+        }
+      }
+    } catch (e) {
+      console.debug('Failed to parse JSON-LD data:', e instanceof Error ? e.message : 'Unknown error');
+    }
+  });
+  
+  return result;
+}
+
+function extractFromJsonLdTikTokInstagram(
+  $: ReturnType<typeof cheerio.load>,
+  title: string,
+  description: string,
+  thumbnailUrl: string
+): { title: string; description: string; thumbnailUrl: string } {
+  let result = { title, description, thumbnailUrl };
+  const jsonLdScripts = $('script[type="application/ld+json"]');
+  
+  jsonLdScripts.each((_, element) => {
+    try {
+      const jsonContent = $(element).html();
+      if (!jsonContent) return;
+      
+      const data = JSON.parse(jsonContent);
+      const itemType = data['@type'];
+      
+      if (itemType === 'VideoObject' || itemType === 'Video') {
+        if (data.name && (!result.title || result.title === 'Untitled')) {
+          result.title = data.name;
+        }
+        if (data.description && !result.description) {
+          result.description = data.description;
+        }
+        if (data.thumbnailUrl && !result.thumbnailUrl) {
+          result.thumbnailUrl = data.thumbnailUrl;
+        }
+      }
+      
+      if (data.headline && (!result.title || result.title === 'Untitled')) {
+        result.title = data.headline;
+      }
+      if (data.description && !result.description) {
+        result.description = data.description;
+      }
+    } catch (e) {
+      console.debug('Failed to parse JSON-LD data:', e instanceof Error ? e.message : 'Unknown error');
+    }
+  });
+  
+  return result;
+}
+
+function extractFromInstagramSharedData(
+  html: string,
+  description: string,
+  thumbnailUrl: string
+): { description: string; thumbnailUrl: string } {
+  let result = { description, thumbnailUrl };
+  const sharedDataMatch = html.match(/window\._sharedData\s*=\s*({.+?});/);
+  
+  if (!sharedDataMatch) {
+    return result;
+  }
+  
+  try {
+    const sharedData = JSON.parse(sharedDataMatch[1]);
+    const entryData = sharedData?.entry_data;
+    if (!entryData) {
+      return result;
+    }
+    
+    const postPage = entryData.PostPage?.[0]?.graphql?.shortcode_media;
+    if (postPage) {
+      if (postPage.edge_media_to_caption?.edges?.[0]?.node?.text && !result.description) {
+        result.description = postPage.edge_media_to_caption.edges[0].node.text;
+      }
+      if (postPage.display_url && !result.thumbnailUrl) {
+        result.thumbnailUrl = postPage.display_url;
+      }
+    }
+  } catch (e) {
+    console.debug('Failed to parse Instagram shared data:', e instanceof Error ? e.message : 'Unknown error');
+  }
+  
+  return result;
+}
+
+function extractFromInstagramMetaTags(
+  $: ReturnType<typeof cheerio.load>,
+  title: string,
+  description: string
+): { title: string; description: string } {
+  let result = { title, description };
+  
+  const instagramTitle = $('meta[property="og:title"]').attr('content') || 
+                        $('meta[property="al:ios:app_name"]').attr('content') ||
+                        $('title').text();
+  if (instagramTitle && (!result.title || result.title === 'Untitled' || result.title === 'Instagram')) {
+    result.title = instagramTitle.replace(/\s*-\s*Instagram\s*$/i, '').trim();
+  }
+  
+  const instagramDesc = $('meta[property="og:description"]').attr('content');
+  if (instagramDesc && !result.description) {
+    result.description = instagramDesc;
+  }
+  
+  return result;
+}
+
+function extractFromTikTokMetaTags(
+  $: ReturnType<typeof cheerio.load>,
+  title: string
+): string {
+  const tiktokTitle = $('meta[property="og:title"]').attr('content') || 
+                     $('meta[name="title"]').attr('content') ||
+                     $('title').text();
+  if (tiktokTitle && (!title || title === 'Untitled')) {
+    return tiktokTitle.replace(/\s*-\s*TikTok\s*$/i, '').trim();
+  }
+  return title;
+}
+
 export async function getVideoMetadata(url: string): Promise<VideoMetadata> {
   try {
+    // Validate URL for SSRF protection
+    const validation = validateVideoUrl(url);
+    if (!validation.valid) {
+      throw new Error(validation.error || 'Invalid URL');
+    }
+    
     // Detect platform
     const platform = detectVideoPlatform(url);
     
@@ -328,18 +563,8 @@ export async function getVideoMetadata(url: string): Promise<VideoMetadata> {
       oembedData = await tryOEmbed(url, platform);
     }
     
-    // Platform-specific headers and handling
-    const headers: Record<string, string> = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.5',
-    };
-    
-    // Add referer for TikTok and Instagram to avoid blocking
-    if (platform === 'tiktok' || platform === 'instagram') {
-      headers['Referer'] = 'https://www.google.com/';
-      headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8';
-    }
+    // Build headers based on platform
+    const headers = buildHeaders(platform);
     
     // Fetch the webpage with proper headers
     const response = await fetch(url, { headers });
@@ -354,158 +579,26 @@ export async function getVideoMetadata(url: string): Promise<VideoMetadata> {
     // Extract metadata using Open Graph tags (primary method)
     let { title, description, thumbnailUrl } = extractMetadataFromOpenGraph(html, $);
     
-    // Use oEmbed data if available and HTML extraction didn't get good results
-    if (oembedData) {
-      if (oembedData.title && (!title || title === 'Untitled')) {
-        title = oembedData.title;
-      }
-      if (oembedData.description && !description) {
-        description = oembedData.description;
-      }
-      if (oembedData.thumbnailUrl && !thumbnailUrl) {
-        thumbnailUrl = oembedData.thumbnailUrl;
-      }
-    }
+    // Merge oEmbed data if available
+    ({ title, description, thumbnailUrl } = mergeOEmbedData(oembedData, title, description, thumbnailUrl));
 
     // Platform-specific extraction for recipe websites
-    if (platform && ['delish', 'allrecipes', 'foodnetwork', 'bonappetit', 'seriouseats', 'tasty'].includes(platform)) {
-      // Try to extract from JSON-LD structured data (recipe sites often use this)
-      const jsonLdScripts = $('script[type="application/ld+json"]');
-      jsonLdScripts.each((_, element) => {
-        try {
-          const jsonContent = $(element).html();
-          if (jsonContent) {
-            const data = JSON.parse(jsonContent);
-            // Handle array of structured data
-            const items = Array.isArray(data) ? data : [data];
-            
-            for (const item of items) {
-              // Look for Recipe schema
-              if (item['@type'] === 'Recipe' || (Array.isArray(item['@type']) && item['@type'].includes('Recipe'))) {
-                if (item.name && (!title || title === 'Untitled')) {
-                  title = item.name;
-                }
-                if (item.description && !description) {
-                  description = item.description;
-                }
-                if (item.image) {
-                  const imageUrl = Array.isArray(item.image) ? item.image[0] : item.image;
-                  if (typeof imageUrl === 'string' && !thumbnailUrl) {
-                    thumbnailUrl = imageUrl;
-                  } else if (imageUrl?.url && !thumbnailUrl) {
-                    thumbnailUrl = imageUrl.url;
-                  }
-                }
-              }
-              // Also check for Article or WebPage with recipe
-              if (item['@type'] === 'Article' || item['@type'] === 'WebPage') {
-                if (item.headline && (!title || title === 'Untitled')) {
-                  title = item.headline;
-                }
-                if (item.description && !description) {
-                  description = item.description;
-                }
-                if (item.image && !thumbnailUrl) {
-                  const imageUrl = Array.isArray(item.image) ? item.image[0] : item.image;
-                  if (typeof imageUrl === 'string') {
-                    thumbnailUrl = imageUrl;
-                  } else if (imageUrl?.url) {
-                    thumbnailUrl = imageUrl.url;
-                  }
-                }
-              }
-            }
-          }
-        } catch (e) {
-          // Ignore JSON parse errors
-        }
-      });
+    const recipePlatforms = ['delish', 'allrecipes', 'foodnetwork', 'bonappetit', 'seriouseats', 'tasty'];
+    if (platform && recipePlatforms.includes(platform)) {
+      ({ title, description, thumbnailUrl } = extractFromJsonLdRecipe($, title, description, thumbnailUrl));
     }
     
     // Platform-specific extraction for TikTok and Instagram
     if (platform === 'tiktok' || platform === 'instagram') {
-      // Try to extract from JSON-LD structured data (common in these platforms)
-      const jsonLdScripts = $('script[type="application/ld+json"]');
-      jsonLdScripts.each((_, element) => {
-        try {
-          const jsonContent = $(element).html();
-          if (jsonContent) {
-            const data = JSON.parse(jsonContent);
-            // TikTok/Instagram often use @type: "VideoObject"
-            if (data['@type'] === 'VideoObject' || data['@type'] === 'Video') {
-              if (data.name && (!title || title === 'Untitled')) {
-                title = data.name;
-              }
-              if (data.description && !description) {
-                description = data.description;
-              }
-              if (data.thumbnailUrl && !thumbnailUrl) {
-                thumbnailUrl = data.thumbnailUrl;
-              }
-            }
-            // Also check for general metadata
-            if (data.headline && (!title || title === 'Untitled')) {
-              title = data.headline;
-            }
-            if (data.description && !description) {
-              description = data.description;
-            }
-          }
-        } catch (e) {
-          // Ignore JSON parse errors
-        }
-      });
+      ({ title, description, thumbnailUrl } = extractFromJsonLdTikTokInstagram($, title, description, thumbnailUrl));
       
-      // For Instagram, try additional extraction methods
       if (platform === 'instagram') {
-        // Instagram often has metadata in window._sharedData or similar
-        const sharedDataMatch = html.match(/window\._sharedData\s*=\s*({.+?});/);
-        if (sharedDataMatch) {
-          try {
-            const sharedData = JSON.parse(sharedDataMatch[1]);
-            // Navigate through Instagram's data structure
-            const entryData = sharedData?.entry_data;
-            if (entryData) {
-              // Try to find PostPage or ProfilePage data
-              const postPage = entryData.PostPage?.[0]?.graphql?.shortcode_media;
-              if (postPage) {
-                if (postPage.edge_media_to_caption?.edges?.[0]?.node?.text && !description) {
-                  description = postPage.edge_media_to_caption.edges[0].node.text;
-                }
-                if (postPage.display_url && !thumbnailUrl) {
-                  thumbnailUrl = postPage.display_url;
-                }
-              }
-            }
-          } catch (e) {
-            // Ignore parse errors
-          }
-        }
-        
-        // Try Instagram-specific meta tags
-        const instagramTitle = $('meta[property="og:title"]').attr('content') || 
-                              $('meta[property="al:ios:app_name"]').attr('content') ||
-                              $('title').text();
-        if (instagramTitle && (!title || title === 'Untitled' || title === 'Instagram')) {
-          title = instagramTitle.replace(/\s*-\s*Instagram\s*$/i, '').trim();
-        }
-        
-        // Instagram description is often in og:description
-        const instagramDesc = $('meta[property="og:description"]').attr('content');
-        if (instagramDesc && !description) {
-          description = instagramDesc;
-        }
+        ({ description, thumbnailUrl } = extractFromInstagramSharedData(html, description, thumbnailUrl));
+        ({ title, description } = extractFromInstagramMetaTags($, title, description));
       }
       
-      // For TikTok, try to extract from meta tags with specific patterns
       if (platform === 'tiktok') {
-        // TikTok sometimes uses different meta tag patterns
-        const tiktokTitle = $('meta[property="og:title"]').attr('content') || 
-                           $('meta[name="title"]').attr('content') ||
-                           $('title').text();
-        if (tiktokTitle && (!title || title === 'Untitled')) {
-          title = tiktokTitle.replace(/\s*-\s*TikTok\s*$/i, '').trim();
-        }
+        title = extractFromTikTokMetaTags($, title);
       }
     }
 

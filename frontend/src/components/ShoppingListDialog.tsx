@@ -10,14 +10,14 @@ import { X, ShoppingCart, AlertTriangle, Check } from 'lucide-react';
 import { useShoppingCart } from '@/hooks/useShoppingCart';
 
 interface ShoppingCartDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  recipeIds: string[];
-  onClose: () => void;
-  onSave?: (recipeIds: string[], shoppingList: ShoppingListResponse) => void;
-  isSaved?: boolean;
-  onComplete?: () => void;
-  currentShoppingCart?: { id: string; recipeIds: string[]; shoppingList: ShoppingListResponse; checkedItems?: string[] } | null;
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly recipeIds: string[];
+  readonly onClose: () => void;
+  readonly onSave?: (recipeIds: string[], shoppingList: ShoppingListResponse) => void;
+  readonly isSaved?: boolean;
+  readonly onComplete?: () => void;
+  readonly currentShoppingCart?: { id: string; recipeIds: string[]; shoppingList: ShoppingListResponse; checkedItems?: string[] } | null;
 }
 
 export function ShoppingCartDialog({ open, onOpenChange, recipeIds, onClose, onSave, isSaved = false, onComplete, currentShoppingCart }: ShoppingCartDialogProps) {
@@ -150,7 +150,7 @@ export function ShoppingCartDialog({ open, onOpenChange, recipeIds, onClose, onS
             {shoppingList.sections.length > 0 ? (
               <div className="space-y-4">
                 {shoppingList.sections.map((section, sectionIndex) => (
-                  <div key={sectionIndex} className="border rounded-lg p-4">
+                  <div key={`section-${section.name}-${sectionIndex}`} className="border rounded-lg p-4">
                     <h3 className="font-semibold text-lg mb-3 text-orange-600 dark:text-orange-400">
                       {section.name}
                     </h3>
@@ -160,7 +160,7 @@ export function ShoppingCartDialog({ open, onOpenChange, recipeIds, onClose, onS
                         const isChecked = checkedItems.has(itemKey);
                         return (
                           <li 
-                            key={ingredientIndex} 
+                            key={itemKey} 
                             className={`text-sm flex items-start gap-2 ${isChecked ? 'opacity-60 line-through' : ''}`}
                           >
                             <Checkbox

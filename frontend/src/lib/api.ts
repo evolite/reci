@@ -7,8 +7,8 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 function handle401Response() {
   // Clear token and redirect to signup
   localStorage.removeItem('reci_auth_token');
-  if (window.location.pathname !== '/signup' && window.location.pathname !== '/login') {
-    window.location.href = '/signup';
+  if (globalThis.location.pathname !== '/signup' && globalThis.location.pathname !== '/login') {
+    globalThis.location.href = '/signup';
   }
 }
 
@@ -119,7 +119,8 @@ export async function logout(): Promise<void> {
         headers: getAuthHeaders(token),
       });
     } catch (error) {
-      // Ignore errors on logout
+      // Ignore errors on logout - user is already logged out
+      console.debug('Logout error (ignored):', error instanceof Error ? error.message : 'Unknown error');
     }
   }
 }
