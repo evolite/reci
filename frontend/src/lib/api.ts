@@ -1,3 +1,5 @@
+import { getErrorMessage } from './utils';
+
 // API base URL - use environment variable or relative path
 // When running in browser, requests go through nginx proxy, so use relative URLs
 // This works on both desktop and mobile devices
@@ -160,7 +162,7 @@ export async function logout(): Promise<void> {
       });
     } catch (error) {
       // Ignore errors on logout - user is already logged out
-      console.debug('Logout error (ignored):', error instanceof Error ? error.message : 'Unknown error');
+      console.debug('Logout error (ignored):', getErrorMessage(error));
     }
   }
 }

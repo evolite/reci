@@ -1,4 +1,5 @@
 import { analyzeRecipeFromText } from '../services/openaiService';
+import { requireArray, filterNonEmptyStrings } from '../utils/errorHandler';
 
 // Helper function to clean instructions text
 export function cleanInstructions(instructions: string): string {
@@ -18,9 +19,11 @@ export function cleanInstructions(instructions: string): string {
   const restSection = cleaned.substring(maxSearchLength);
   
   // Use negated character class [^\n] instead of . to avoid backtracking issues
-  const ingredientsPattern = /^Ingredients?:?\s*\n[^\n]{0,5000}(?=\n(?:Instructions?|Steps?|Method|Directions?|$))/ims;
+  // Simplified regex pattern to reduce complexity by extracting common pattern
+  const sectionEnd = '(?=\\n(?:Instructions?|Steps?|Method|Directions?|$))';
+  const ingredientsPattern = new RegExp(`^Ingredients?:?\\s*\\n[^\\n]{0,5000}${sectionEnd}`, 'ims');
   let cleanedSection = searchSection.replace(ingredientsPattern, '');
-  const ingredientsPattern2 = /^[^\n]{0,5000}Ingredients?:?\s*\n[^\n]{0,5000}(?=\n(?:Instructions?|Steps?|Method|Directions?|$))/ims;
+  const ingredientsPattern2 = new RegExp(`^[^\\n]{0,5000}Ingredients?:?\\s*\\n[^\\n]{0,5000}${sectionEnd}`, 'ims');
   cleanedSection = cleanedSection.replace(ingredientsPattern2, '');
   cleaned = cleanedSection + restSection;
   
@@ -120,10 +123,8 @@ export function prepareUpdateData(
   if (body.cuisineType !== undefined) updateData.cuisineType = String(body.cuisineType);
   
   if (body.ingredients !== undefined) {
-    if (!Array.isArray(body.ingredients)) {
-      throw new TypeError('ingredients must be an array');
-    }
-    updateData.ingredients = body.ingredients.filter((ing: any) => typeof ing === 'string' && ing.trim().length > 0);
+    requireArray(body.ingredients, 'ingredients');
+    updateData.ingredients = filterNonEmptyStrings(body.ingredients);
   }
   
   if (body.instructions !== undefined) {
@@ -132,10 +133,8 @@ export function prepareUpdateData(
   }
   
   if (body.tags !== undefined) {
-    if (!Array.isArray(body.tags)) {
-      throw new TypeError('tags must be an array');
-    }
-    updateData.tags = body.tags.filter((tag: any) => typeof tag === 'string' && tag.trim().length > 0);
+    requireArray(body.tags, 'tags');
+    updateData.tags = filterNonEmptyStrings(body.tags);
   }
   
   return { updateData, hasInstructions, instructionsValue };

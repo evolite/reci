@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 import { login, register, logout, getCurrentUser, checkInvite } from '@/lib/api';
+import { getErrorMessage } from '@/lib/utils';
 
 export interface User {
   id: string;
@@ -49,7 +50,7 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
       return Date.now() >= exp * 1000;
     } catch (error) {
       // If we can't parse the token, consider it invalid
-      console.debug('Token expiration check failed:', error instanceof Error ? error.message : 'Unknown error');
+      console.debug('Token expiration check failed:', getErrorMessage(error));
       return true;
     }
   };

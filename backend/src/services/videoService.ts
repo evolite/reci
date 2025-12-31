@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 import { validateVideoUrl } from '../utils/validation';
 import { extractYouTubeCommentsFromHtml } from './youtubeServiceHelpers';
+import { getErrorMessage } from '../utils/errorHandler';
 
 export interface VideoMetadata {
   title: string;
@@ -673,6 +674,6 @@ export async function getVideoMetadata(url: string): Promise<VideoMetadata> {
       platform: platform || undefined,
     };
   } catch (error) {
-    throw new Error(`Failed to fetch video metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`Failed to fetch video metadata: ${getErrorMessage(error)}`);
   }
 }

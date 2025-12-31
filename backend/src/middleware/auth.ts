@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../services/authService';
 import { prisma } from '../lib/prisma';
+import { getErrorMessage } from '../utils/errorHandler';
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -44,7 +45,7 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
     req.user = user;
     next();
   } catch (error) {
-    console.error('Authentication error:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Authentication error:', getErrorMessage(error));
     return res.status(401).json({ error: 'Authentication failed' });
   }
 }
@@ -87,7 +88,7 @@ export async function optionalAuth(req: AuthRequest, res: Response, next: NextFu
     }
     next();
   } catch (error) {
-    console.error('Optional auth error:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Optional auth error:', getErrorMessage(error));
     next();
   }
 }

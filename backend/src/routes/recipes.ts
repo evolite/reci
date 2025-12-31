@@ -6,7 +6,7 @@ import { prisma } from '../lib/prisma';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { analyzeAndUpdateRecipe, prepareUpdateData } from './recipeHelpers';
 import { validateVideoUrl } from '../utils/validation';
-import { handleRouteError, validateString, validateArray } from '../utils/errorHandler';
+import { handleRouteError, validateString, validateArray, filterNonEmptyStrings } from '../utils/errorHandler';
 
 const router = Router();
 
@@ -240,7 +240,7 @@ router.patch('/:id/tags', async (req: AuthRequest, res: Response) => {
     const recipe = await prisma.recipe.update({
       where: { id },
       data: {
-        tags: tags.filter((tag: any) => typeof tag === 'string' && tag.trim().length > 0),
+        tags: filterNonEmptyStrings(tags),
       },
     });
 

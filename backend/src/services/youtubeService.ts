@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import { extractYouTubeCommentsFromHtml } from './youtubeServiceHelpers';
+import { getErrorMessage } from '../utils/errorHandler';
 
 export interface YouTubeVideoMetadata {
   title: string;
@@ -127,6 +128,6 @@ export async function getVideoMetadata(videoId: string): Promise<YouTubeVideoMet
       topComments: topComments.length > 0 ? topComments : undefined,
     };
   } catch (error) {
-    throw new Error(`Failed to fetch video metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`Failed to fetch video metadata: ${getErrorMessage(error)}`);
   }
 }

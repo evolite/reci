@@ -102,3 +102,26 @@ export function validateArray(
   
   return { valid: true };
 }
+
+/**
+ * Extracts error message from unknown error type
+ */
+export function getErrorMessage(error: unknown, defaultMessage: string = 'Unknown error'): string {
+  return error instanceof Error ? error.message : defaultMessage;
+}
+
+/**
+ * Validates that a value is an array, throws TypeError if not
+ */
+export function requireArray(value: unknown, fieldName: string): asserts value is unknown[] {
+  if (!Array.isArray(value)) {
+    throw new TypeError(`${fieldName} must be an array`);
+  }
+}
+
+/**
+ * Filters array to only include non-empty strings
+ */
+export function filterNonEmptyStrings(items: unknown[]): string[] {
+  return items.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+}

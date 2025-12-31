@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import { RecipeAnalysis, ShoppingListResponse } from '../models/Recipe';
 import { sanitizeInput } from '../utils/validation';
 import { prisma } from '../lib/prisma';
+import { getErrorMessage } from '../utils/errorHandler';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -228,7 +229,7 @@ function parseAndValidateResponse(cleanedContent: string, sanitizedTitle: string
     return createFallbackAnalysis(sanitizedTitle, sanitizedDescription);
   } catch (parseError) {
     console.error('Failed to parse OpenAI response. Raw content:', cleanedContent.substring(0, 500));
-    throw new Error(`Failed to parse JSON response from OpenAI: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+    throw new Error(`Failed to parse JSON response from OpenAI: ${getErrorMessage(parseError)}`);
   }
 }
 
