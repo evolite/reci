@@ -87,10 +87,7 @@ Pre-built images are available on GitHub Container Registry:
 
 ## Contributing
 
-This is a personal project, but contributions are welcome! Feel free to:
-- Open issues for bugs or feature requests
-- Submit pull requests
-- Share feedback or ideas
+This is a personal project.
 
 ## License
 
@@ -100,4 +97,4 @@ MIT - Do whatever you want with it.
 
 **Built for my family and me, for people who love cooking but hate organizing recipes.**
 
-*This project was vibe coded. I make no guarantees about code quality, security, or reliability. Use at your own risk.*
+*This project was vibe coded. I make no guarantees about code quality, security, or reliability. That said i have used SonarQube to validate quality, Use at your own risk anyway.*
