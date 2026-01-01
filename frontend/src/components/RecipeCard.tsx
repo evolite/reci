@@ -274,6 +274,14 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
               <div 
                 className="absolute bottom-2 right-2"
                 onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.stopPropagation();
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label="Recipe rating"
               >
                 <Dice 
                   value={recipe.userRating ?? null} 
@@ -500,9 +508,9 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
                     <span className="text-xs font-medium text-muted-foreground">Tags</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {tags.map((tag, index) => (
+                    {tags.map((tag) => (
                       <Badge
-                        key={index}
+                        key={tag}
                         variant="outline"
                         className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-700"
                       >
