@@ -151,6 +151,9 @@ export interface Recipe {
   instructions?: string | null;
   createdAt: string;
   updatedAt: string;
+  averageRating?: number | null;
+  userRating?: number | null;
+  ratingCount?: number;
 }
 
 // Auth API functions
@@ -336,6 +339,35 @@ export async function rescrapeAndAnalyzeRecipe(recipeId: string): Promise<Recipe
   return apiRequest<Recipe>(`/api/recipes/${recipeId}/rescrape-and-analyze`, {
     method: 'POST',
   });
+}
+
+// Rating API functions
+export async function rateRecipe(recipeId: string, rating: number): Promise<void> {
+  // Try PUT first (update existing), if it fails with 404, use POST (create new)
+  try {
+    await apiRequest<void>(`/api/ratings/${recipeId}`, {
+      method: 'PUT',
+      body: { rating },
+    });
+  } catch (error) {
+    // If update fails (likely no existing rating), create new rating
+    if (error instanceof Error && error.message.includes('404')) {
+      await apiRequest<void>('/api/ratings', {
+        method: 'POST',
+        body: { recipeId, rating },
+      });
+    } else {
+      throw error;
+    }
+  }
+}
+
+export async function getUserRating(recipeId: string): Promise<{ rating: number | null }> {
+  return apiRequest<{ rating: number | null }>(`/api/ratings/${recipeId}`);
+}
+
+export async function getRecipeRatingStats(recipeId: string): Promise<{ averageRating: number | null; count: number }> {
+  return apiRequest<{ averageRating: number | null; count: number }>(`/api/ratings/recipe/${recipeId}/stats`);
 }
 
 // Shopping List API functions

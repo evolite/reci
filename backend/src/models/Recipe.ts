@@ -11,6 +11,9 @@ export interface Recipe {
   instructions?: string | null;
   createdAt: Date;
   updatedAt: Date;
+  averageRating?: number | null; // Average rating (1-6, rounded to 1 decimal)
+  userRating?: number | null; // Current user's rating (1-6)
+  ratingCount?: number; // Total number of ratings
 }
 
 export interface CreateRecipeInput {

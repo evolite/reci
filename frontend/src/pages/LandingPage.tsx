@@ -18,6 +18,63 @@ interface Recipe {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 const GITHUB_URL = 'https://github.com/evolite/reci';
 
+interface RecipeCardProps {
+  recipe: Recipe;
+}
+
+function RecipeCard({ recipe }: RecipeCardProps) {
+  return (
+    <Card
+      className="flex-shrink-0 w-80 sm:w-96 h-full flex flex-col overflow-hidden group cursor-pointer hover:scale-105 transition-transform duration-300 bg-white dark:bg-gray-800"
+    >
+      <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0">
+        <img
+          src={recipe.thumbnailUrl}
+          alt={recipe.dishName}
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+        />
+      </div>
+      <CardContent className="p-4 flex-1 flex flex-col">
+        <h3 className="font-semibold text-base sm:text-lg mb-2 line-clamp-2">
+          {recipe.dishName}
+        </h3>
+        <p className="text-sm text-muted-foreground mb-3 flex-1 line-clamp-4">
+          {recipe.description}
+        </p>
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+            {recipe.cuisineType}
+          </Badge>
+        </div>
+        {recipe.tags && recipe.tags.length > 0 && (
+          <div className="border-t pt-3 mt-auto">
+            <div className="flex items-center gap-2 mb-2">
+              <Tag className="w-3 h-3 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">Tags</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {recipe.tags.slice(0, 6).map((tag) => (
+                <Badge
+                  key={tag}
+                  variant="outline"
+                  className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-700"
+                >
+                  {tag}
+                </Badge>
+              ))}
+              {recipe.tags.length > 6 && (
+                <Badge variant="outline" className="text-xs">
+                  +{recipe.tags.length - 6}
+                </Badge>
+              )}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function LandingPage() {
   const [searchParams] = useSearchParams();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -219,107 +276,11 @@ export function LandingPage() {
                 }
               `}</style>
               {recipes.map((recipe) => (
-                <Card
-                  key={recipe.id}
-                  className="flex-shrink-0 w-80 sm:w-96 h-full flex flex-col overflow-hidden group cursor-pointer hover:scale-105 transition-transform duration-300 bg-white dark:bg-gray-800"
-                >
-                  <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0">
-                    <img
-                      src={recipe.thumbnailUrl}
-                      alt={recipe.dishName}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                  </div>
-                  <CardContent className="p-4 flex-1 flex flex-col">
-                    <h3 className="font-semibold text-base sm:text-lg mb-2 line-clamp-2">
-                      {recipe.dishName}
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-3 flex-1 line-clamp-4">
-                      {recipe.description}
-                    </p>
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-                        {recipe.cuisineType}
-                      </Badge>
-                    </div>
-                    {recipe.tags && recipe.tags.length > 0 && (
-                      <div className="border-t pt-3 mt-auto">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Tag className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-xs font-medium text-muted-foreground">Tags</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {recipe.tags.slice(0, 6).map((tag) => (
-                            <Badge
-                              key={tag}
-                              variant="outline"
-                              className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-700"
-                            >
-                              {tag}
-                            </Badge>
-                          ))}
-                          {recipe.tags.length > 6 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{recipe.tags.length - 6}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                <RecipeCard key={recipe.id} recipe={recipe} />
               ))}
               {/* Duplicate recipes for seamless infinite loop */}
               {recipes.map((recipe) => (
-                <Card
-                  key={`${recipe.id}-dup`}
-                  className="flex-shrink-0 w-80 sm:w-96 h-full flex flex-col overflow-hidden group cursor-pointer hover:scale-105 transition-transform duration-300 bg-white dark:bg-gray-800"
-                >
-                  <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0">
-                    <img
-                      src={recipe.thumbnailUrl}
-                      alt={recipe.dishName}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                  </div>
-                  <CardContent className="p-4 flex-1 flex flex-col">
-                    <h3 className="font-semibold text-base sm:text-lg mb-2 line-clamp-2">
-                      {recipe.dishName}
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-3 flex-1 line-clamp-4">
-                      {recipe.description}
-                    </p>
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-                        {recipe.cuisineType}
-                      </Badge>
-                    </div>
-                    {recipe.tags && recipe.tags.length > 0 && (
-                      <div className="border-t pt-3 mt-auto">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Tag className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-xs font-medium text-muted-foreground">Tags</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {recipe.tags.slice(0, 6).map((tag) => (
-                            <Badge
-                              key={tag}
-                              variant="outline"
-                              className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-700"
-                            >
-                              {tag}
-                            </Badge>
-                          ))}
-                          {recipe.tags.length > 6 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{recipe.tags.length - 6}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                <RecipeCard key={`${recipe.id}-dup`} recipe={recipe} />
               ))}
             </div>
           </div>

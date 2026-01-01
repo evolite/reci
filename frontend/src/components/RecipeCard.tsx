@@ -22,9 +22,11 @@ import type { Recipe } from '@/lib/api';
 import { ExternalLink, Tag, Edit2, Save, X, Trash2, RefreshCw } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { updateRecipe, deleteRecipe, rescrapeAndAnalyzeRecipe } from '@/lib/api';
+import { updateRecipe, deleteRecipe, rescrapeAndAnalyzeRecipe, rateRecipe } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { RecipeDialog } from './RecipeDialog';
+import { Dice } from './Dice';
+import { RatingDialog } from './RatingDialog';
 
 interface RecipeCardProps {
   readonly recipe: Recipe;
@@ -55,6 +57,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [showRatingDialog, setShowRatingDialog] = useState(false);
   const queryClient = useQueryClient();
   
   const tagForm = useForm<TagFormValues>({
@@ -263,6 +266,20 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
                   aria-label={isSelected ? 'Deselect recipe' : 'Select recipe'}
                 />
               </button>
+              <div 
+                className="absolute bottom-2 right-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Dice 
+                  value={recipe.userRating ?? null} 
+                  size="sm" 
+                  onClick={(e) => {
+                    e?.stopPropagation();
+                    setShowRatingDialog(true);
+                  }}
+                  clickable
+                />
+              </div>
               <Button
                 onClick={handleEdit}
                 size="sm"
@@ -319,12 +336,16 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
             </div>
           ) : (
             <>
-              <CardTitle className="line-clamp-2 text-base sm:text-lg sm:text-xl mb-1 sm:mb-2 group-hover:text-orange-600 transition-colors">
-                {recipe.dishName}
-              </CardTitle>
-              <CardDescription className="line-clamp-4 text-xs sm:text-sm">
-                {recipe.description}
-              </CardDescription>
+              <div className="flex items-start justify-between gap-2 mb-1 sm:mb-2">
+                <CardTitle className="line-clamp-2 text-base sm:text-lg sm:text-xl group-hover:text-orange-600 transition-colors flex-1">
+                  {recipe.dishName}
+                </CardTitle>
+              </div>
+              <div className="mb-2">
+                <CardDescription className="line-clamp-4 text-xs sm:text-sm">
+                  {recipe.description}
+                </CardDescription>
+              </div>
             </>
           )}
         </CardHeader>
@@ -494,6 +515,19 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
         recipe={recipe}
         open={showRecipeDialog}
         onOpenChange={setShowRecipeDialog}
+      />
+
+      <RatingDialog
+        open={showRatingDialog}
+        onOpenChange={setShowRatingDialog}
+        currentRating={recipe.userRating ?? null}
+        onRate={async (rating: number) => {
+          await rateRecipe(recipe.id, rating);
+          // Invalidate and refetch recipes to update rating data
+          await queryClient.invalidateQueries({ queryKey: ['recipes'] });
+          await queryClient.invalidateQueries({ queryKey: ['recipe', recipe.id] });
+        }}
+        recipeName={recipe.dishName}
       />
 
       {/* Delete Confirmation Dialog */}

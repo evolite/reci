@@ -7,8 +7,40 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { analyzeAndUpdateRecipe, prepareUpdateData } from './recipeHelpers';
 import { validateVideoUrl } from '../utils/validation';
 import { handleRouteError, validateString, validateArray, filterNonEmptyStrings } from '../utils/errorHandler';
+import { calculateAverageRating, getUserRating, getRecipeRatingStats } from '../services/ratingService';
 
 const router = Router();
+
+/**
+ * Safely fetch rating data for a recipe, returning defaults if rating service fails
+ */
+async function getRatingDataSafely(recipeId: string, userId?: string): Promise<{
+  averageRating: number | null;
+  userRating: number | null;
+  ratingCount: number;
+}> {
+  try {
+    const [averageRating, userRating, stats] = await Promise.all([
+      calculateAverageRating(recipeId),
+      userId ? getUserRating(userId, recipeId) : Promise.resolve(null),
+      getRecipeRatingStats(recipeId),
+    ]);
+
+    return {
+      averageRating,
+      userRating,
+      ratingCount: stats.count,
+    };
+  } catch (error) {
+    // If rating service fails, return defaults (ratings are optional)
+    console.error(`Failed to fetch ratings for recipe ${recipeId}:`, error);
+    return {
+      averageRating: null,
+      userRating: null,
+      ratingCount: 0,
+    };
+  }
+}
 
 // GET /api/recipes/public - Get public recipes for landing page (no auth required)
 router.get('/public', async (req: Request, res: Response) => {
@@ -27,7 +59,20 @@ router.get('/public', async (req: Request, res: Response) => {
         createdAt: true,
       },
     });
-    res.json(recipes);
+
+    // Add average ratings (no user ratings for unauthenticated users)
+    const recipesWithRatings = await Promise.all(
+      recipes.map(async (recipe) => {
+        const ratingData = await getRatingDataSafely(recipe.id);
+        return {
+          ...recipe,
+          averageRating: ratingData.averageRating,
+          ratingCount: ratingData.ratingCount,
+        };
+      })
+    );
+
+    res.json(recipesWithRatings);
   } catch (error) {
     handleRouteError(error, res, 'fetching public recipes');
   }
@@ -127,7 +172,19 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     const recipes = await prisma.recipe.findMany({
       orderBy: { createdAt: 'desc' },
     });
-    res.json(recipes);
+
+    // Add rating data for each recipe
+    const recipesWithRatings = await Promise.all(
+      recipes.map(async (recipe) => {
+        const ratingData = await getRatingDataSafely(recipe.id, req.userId!);
+        return {
+          ...recipe,
+          ...ratingData,
+        };
+      })
+    );
+
+    res.json(recipesWithRatings);
   } catch (error) {
     handleRouteError(error, res, 'fetching recipes');
   }
@@ -166,7 +223,18 @@ router.get('/search', async (req: AuthRequest, res: Response) => {
       return matchesText || matchesIngredient || matchesTag;
     });
 
-    res.json(filteredRecipes);
+    // Add rating data for each filtered recipe
+    const recipesWithRatings = await Promise.all(
+      filteredRecipes.map(async (recipe) => {
+        const ratingData = await getRatingDataSafely(recipe.id, req.userId!);
+        return {
+          ...recipe,
+          ...ratingData,
+        };
+      })
+    );
+
+    res.json(recipesWithRatings);
   } catch (error) {
     handleRouteError(error, res, 'searching recipes');
   }
@@ -190,7 +258,15 @@ router.get('/random', async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Recipe not found' });
     }
 
-    res.json(recipe);
+    // Add rating data
+    const ratingData = await getRatingDataSafely(recipe.id, req.userId!);
+
+    const recipeWithRatings = {
+      ...recipe,
+      ...ratingData,
+    };
+
+    res.json(recipeWithRatings);
   } catch (error) {
     handleRouteError(error, res, 'fetching random recipe');
   }
@@ -208,7 +284,15 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Recipe not found' });
     }
 
-    res.json(recipe);
+    // Add rating data
+    const ratingData = await getRatingDataSafely(recipe.id, req.userId!);
+
+    const recipeWithRatings = {
+      ...recipe,
+      ...ratingData,
+    };
+
+    res.json(recipeWithRatings);
   } catch (error) {
     handleRouteError(error, res, 'fetching recipe');
   }

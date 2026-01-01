@@ -15,8 +15,10 @@ import type { Recipe } from '@/lib/api';
 import { ExternalLink, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
-import { updateRecipe } from '@/lib/api';
+import { updateRecipe, rateRecipe, getRecipe } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
+import { Dice } from './Dice';
+import { RatingDialog } from './RatingDialog';
 
 interface RecipeDialogProps {
   readonly recipe: Recipe | null;
@@ -32,6 +34,7 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [showValidationDialog, setShowValidationDialog] = useState(false);
+  const [showRatingDialog, setShowRatingDialog] = useState(false);
   const queryClient = useQueryClient();
 
   // Update currentRecipe when recipe prop changes
@@ -102,11 +105,36 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent onClose={() => onOpenChange(false)} className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="text-2xl">{currentRecipe.dishName}</DialogTitle>
-          <DialogDescription>{currentRecipe.description}</DialogDescription>
+          <div className="mb-2">
+            <DialogTitle className="text-2xl flex-1">{currentRecipe.dishName}</DialogTitle>
+          </div>
+          <div className="mb-2">
+            <DialogDescription className="flex-1">{currentRecipe.description}</DialogDescription>
+          </div>
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Rating Section */}
+          <div className="flex items-center gap-4 pb-2 border-b">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Your rating:</span>
+              <Dice 
+                value={currentRecipe.userRating ?? null} 
+                size="sm"
+                onClick={() => setShowRatingDialog(true)}
+                clickable
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Average:</span>
+              <Dice value={currentRecipe.averageRating ?? null} size="sm" />
+            </div>
+            {currentRecipe.ratingCount !== undefined && currentRecipe.ratingCount > 0 && (
+              <span className="text-xs text-muted-foreground ml-auto">
+                {currentRecipe.ratingCount} {currentRecipe.ratingCount === 1 ? 'rating' : 'ratings'}
+              </span>
+            )}
+          </div>
           {/* Ingredients Section */}
           {currentRecipe.ingredients && currentRecipe.ingredients.length > 0 && (
             <div className="bg-muted p-4 rounded-lg">
@@ -273,6 +301,22 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    <RatingDialog
+      open={showRatingDialog}
+      onOpenChange={setShowRatingDialog}
+      currentRating={currentRecipe.userRating ?? null}
+      onRate={async (rating: number) => {
+        await rateRecipe(currentRecipe.id, rating);
+        // Invalidate and refetch recipes to update rating data
+        await queryClient.invalidateQueries({ queryKey: ['recipes'] });
+        await queryClient.invalidateQueries({ queryKey: ['recipe', currentRecipe.id] });
+        // Update local state with fresh recipe data
+        const updatedRecipe = await getRecipe(currentRecipe.id);
+        setCurrentRecipe(updatedRecipe);
+      }}
+      recipeName={currentRecipe.dishName}
+    />
     </>
   );
 }
