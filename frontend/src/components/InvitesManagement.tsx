@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from '@/components/ui/empty';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { CopyButton } from '@/components/CopyButton';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import {
   AlertDialog,
@@ -22,7 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { AlertCircle, Plus, Trash2, Copy, CheckCircle2, Users } from 'lucide-react';
+import { AlertCircle, Plus, Trash2, CheckCircle2, Users } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 
 const inviteSchema = z.object({
@@ -346,42 +346,18 @@ export const InvitesManagement = forwardRef<InvitesManagementRef, InvitesManagem
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleCopyToken(invite.token)}
-                              >
-                                {copiedToken === invite.token ? (
-                                  <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                ) : (
-                                  <Copy className="w-4 h-4" />
-                                )}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Copy token</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleCopyLink(invite.token)}
-                              >
-                                {copiedLink === invite.token ? (
-                                  <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                ) : (
-                                  <Copy className="w-4 h-4" />
-                                )}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Copy invite link</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <CopyButton
+                          value={invite.token}
+                          copiedValue={copiedToken}
+                          onCopy={handleCopyToken}
+                          tooltipText="Copy token"
+                        />
+                        <CopyButton
+                          value={invite.token}
+                          copiedValue={copiedLink}
+                          onCopy={handleCopyLink}
+                          tooltipText="Copy invite link"
+                        />
                         {!invite.usedAt && (
                           <Button
                             variant="ghost"
