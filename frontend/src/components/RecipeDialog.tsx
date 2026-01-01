@@ -159,8 +159,8 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
             <div className="bg-muted p-4 rounded-lg">
               <h3 className="font-semibold mb-3 text-lg">Ingredients</h3>
               <ul className="list-none space-y-1 text-sm">
-                {currentRecipe.ingredients.map((ingredient, index) => (
-                  <li key={`${ingredient}-${index}`} className="flex items-start">
+                {currentRecipe.ingredients.map((ingredient) => (
+                  <li key={ingredient} className="flex items-start">
                     <span className="mr-2 text-orange-600">•</span>
                     <span>{ingredient}</span>
                   </li>
@@ -185,7 +185,7 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
                     return steps.map((step, index) => {
                       const cleanStep = step.replace(/^\d+[.)]\s*/, '').trim();
                       return (
-                        <li key={`${cleanStep}-${index}`} className="flex items-start">
+                        <li key={cleanStep} className="flex items-start">
                           <span className="mr-3 text-orange-600 font-semibold min-w-[24px]">{index + 1}.</span>
                           <span className="flex-1">{cleanStep}</span>
                         </li>
@@ -215,7 +215,7 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
                     return groupedSteps.map((step, index) => {
                       const cleanStep = step.replace(/^\d+[.)]\s*/, '').trim();
                       return (
-                        <li key={`${cleanStep}-${index}`} className="flex items-start">
+                        <li key={cleanStep} className="flex items-start">
                           <span className="mr-3 text-orange-600 font-semibold min-w-[24px]">{index + 1}.</span>
                           <span className="flex-1">{cleanStep}</span>
                         </li>
@@ -229,7 +229,7 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
                   return steps.map((step, index) => {
                     const cleanStep = step.replace(/^\d+[.)]\s*/, '').trim();
                     return (
-                      <li key={`${cleanStep}-${index}`} className="flex items-start">
+                      <li key={cleanStep} className="flex items-start">
                         <span className="mr-3 text-orange-600 font-semibold min-w-[24px]">{index + 1}.</span>
                         <span className="flex-1">{cleanStep}</span>
                       </li>

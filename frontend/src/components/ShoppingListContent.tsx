@@ -45,7 +45,7 @@ export function ShoppingListContent({
           {shoppingList.sections.map((section, sectionIndex) => {
             if (useCardLayout) {
               return (
-                <Card key={`section-${section.name}-${sectionIndex}`}>
+                <Card key={section.name}>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg text-orange-600 dark:text-orange-400">
                       {section.name}
@@ -58,7 +58,7 @@ export function ShoppingListContent({
                         const isChecked = checkedItems.has(itemKey);
                         return (
                           <li
-                            key={itemKey}
+                            key={`${section.name}-${ingredient}`}
                             className={`text-sm flex items-start gap-2 ${isChecked ? 'opacity-60 line-through' : ''}`}
                           >
                             <Checkbox
@@ -76,7 +76,7 @@ export function ShoppingListContent({
               );
             } else {
               return (
-                <div key={`section-${section.name}-${sectionIndex}`} className="border rounded-lg p-4">
+                <div key={section.name} className="border rounded-lg p-4">
                   <h3 className="font-semibold text-lg mb-3 text-orange-600 dark:text-orange-400">
                     {section.name}
                   </h3>
@@ -86,7 +86,7 @@ export function ShoppingListContent({
                       const isChecked = checkedItems.has(itemKey);
                       return (
                         <li
-                          key={itemKey}
+                          key={`${section.name}-${ingredient}`}
                           className={`text-sm flex items-start gap-2 ${isChecked ? 'opacity-60 line-through' : ''}`}
                         >
                           <Checkbox

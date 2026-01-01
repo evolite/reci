@@ -193,7 +193,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 // GET /api/recipes/search?q=... - Search recipes
 router.get('/search', async (req: AuthRequest, res: Response) => {
   try {
-    const query = req.query.q as string;
+    const query = typeof req.query.q === 'string' ? req.query.q : undefined;
 
     if (!query || query.trim() === '') {
       return res.status(400).json({ error: 'Search query is required' });

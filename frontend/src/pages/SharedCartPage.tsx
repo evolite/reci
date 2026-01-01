@@ -148,7 +148,7 @@ export function SharedCartPage() {
           {cart.shoppingList.sections.length > 0 ? (
             <div className="space-y-4">
               {cart.shoppingList.sections.map((section, sectionIndex) => (
-                <Card key={`section-${section.name}-${sectionIndex}`}>
+                <Card key={section.name}>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg text-orange-600 dark:text-orange-400">
                       {section.name}
@@ -161,7 +161,7 @@ export function SharedCartPage() {
                       const isChecked = checkedItems.has(itemKey);
                       return (
                         <li 
-                          key={`${itemKey}-${ingredient}`} 
+                          key={`${section.name}-${ingredient}`} 
                           className={`text-sm flex items-start gap-2 ${isChecked ? 'opacity-60 line-through' : ''}`}
                         >
                           <Checkbox
