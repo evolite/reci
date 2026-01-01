@@ -2,8 +2,8 @@ import { CardTitle, CardDescription } from '@/components/ui/card';
 import { ChefHat } from 'lucide-react';
 
 interface AuthCardHeaderProps {
-  title: string;
-  description: string;
+  readonly title: string;
+  readonly description: string;
 }
 
 export function AuthCardHeader({ title, description }: AuthCardHeaderProps) {

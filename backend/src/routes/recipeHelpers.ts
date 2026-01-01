@@ -20,10 +20,10 @@ export function cleanInstructions(instructions: string): string {
   
   // Use negated character class [^\n] instead of . to avoid backtracking issues
   // Simplified regex pattern to reduce complexity by extracting common pattern
-  const sectionEnd = '(?=\\n(?:Instructions?|Steps?|Method|Directions?|$))';
-  const ingredientsPattern = new RegExp(`^Ingredients?:?\\s*\\n[^\\n]{0,5000}${sectionEnd}`, 'ims');
+  const sectionEnd = String.raw`(?=\n(?:Instructions?|Steps?|Method|Directions?|$))`;
+  const ingredientsPattern = new RegExp(String.raw`^Ingredients?:?\s*\n[^\n]{0,5000}${sectionEnd}`, 'ims');
   let cleanedSection = searchSection.replace(ingredientsPattern, '');
-  const ingredientsPattern2 = new RegExp(`^[^\\n]{0,5000}Ingredients?:?\\s*\\n[^\\n]{0,5000}${sectionEnd}`, 'ims');
+  const ingredientsPattern2 = new RegExp(String.raw`^[^\n]{0,5000}Ingredients?:?\s*\n[^\n]{0,5000}${sectionEnd}`, 'ims');
   cleanedSection = cleanedSection.replace(ingredientsPattern2, '');
   cleaned = cleanedSection + restSection;
   

@@ -35,7 +35,6 @@ export function AdminSettingsPage() {
   useEffect(() => {
     if (!user?.isAdmin) {
       navigate('/');
-      return;
     }
   }, [user, navigate]);
 

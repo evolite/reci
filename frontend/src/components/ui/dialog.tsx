@@ -74,15 +74,18 @@ const DialogHeader = ({
 const DialogTitle = React.forwardRef<
   HTMLHeadingElement,
   React.HTMLAttributes<HTMLHeadingElement>
->(({ className, ...props }, ref) => (
+>(({ className, children, ...props }, ref) => (
   <h2
     ref={ref}
     className={cn(
       "text-lg font-semibold leading-none tracking-tight",
       className
     )}
+    aria-label={!children ? "Dialog title" : undefined}
     {...props}
-  />
+  >
+    {children}
+  </h2>
 ));
 DialogTitle.displayName = "DialogTitle";
 

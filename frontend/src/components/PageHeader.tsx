@@ -2,10 +2,10 @@ import type { ReactNode } from 'react';
 import { ChefHat } from 'lucide-react';
 
 interface PageHeaderProps {
-  title: string;
-  description?: string;
-  icon?: ReactNode;
-  actions?: ReactNode;
+  readonly title: string;
+  readonly description?: string;
+  readonly icon?: ReactNode;
+  readonly actions?: ReactNode;
 }
 
 export function PageHeader({ title, description, icon, actions }: PageHeaderProps) {

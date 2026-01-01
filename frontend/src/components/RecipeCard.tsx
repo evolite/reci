@@ -332,10 +332,12 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
         </div>
         <CardHeader className="p-3 sm:p-4 sm:p-6">
           {isEditing ? (
-            <div className="space-y-2" onKeyDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+            <div className="space-y-2">
               <Input
                 value={editData.dishName}
                 onChange={(e) => setEditData({ ...editData, dishName: e.target.value })}
+                onKeyDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
                 placeholder="Dish Name"
                 className="text-base sm:text-lg font-semibold"
               />
@@ -357,12 +359,14 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
         </CardHeader>
         <CardContent className="p-3 sm:p-4 sm:p-6 pt-0 space-y-3">
           {isEditing ? (
-            <div className="space-y-3" onKeyDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+            <div className="space-y-3">
               <div>
                 <Label className="text-xs font-medium mb-1 block">Description</Label>
                 <Textarea
                   value={editData.description}
                   onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
                   placeholder="Description"
                   className="text-xs sm:text-sm min-h-[60px]"
                 />
@@ -372,6 +376,8 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
                 <Input
                   value={editData.cuisineType}
                   onChange={(e) => setEditData({ ...editData, cuisineType: e.target.value })}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
                   placeholder="Cuisine Type"
                   className="text-xs sm:text-sm"
                 />
@@ -381,6 +387,8 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
                 <Textarea
                   value={editData.ingredients}
                   onChange={(e) => setEditData({ ...editData, ingredients: e.target.value })}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
                   placeholder="2 dl milk&#10;500 g flour&#10;3 eggs&#10;1 tsp salt"
                   className="text-xs sm:text-sm min-h-[100px] font-mono"
                 />
@@ -390,6 +398,8 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
                 <Textarea
                   value={editData.instructions}
                   onChange={(e) => setEditData({ ...editData, instructions: e.target.value })}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
                   placeholder="Step-by-step cooking instructions..."
                   className="text-xs sm:text-sm min-h-[120px]"
                 />
