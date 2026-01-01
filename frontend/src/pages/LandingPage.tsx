@@ -19,7 +19,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 const GITHUB_URL = 'https://github.com/evolite/reci';
 
 interface RecipeCardProps {
-  recipe: Recipe;
+  readonly recipe: Recipe;
 }
 
 function RecipeCard({ recipe }: RecipeCardProps) {

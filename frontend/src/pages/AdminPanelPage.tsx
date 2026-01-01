@@ -41,7 +41,6 @@ export function AdminPanelPage() {
   useEffect(() => {
     if (!user?.isAdmin) {
       navigate('/');
-      return;
     }
   }, [user, navigate]);
 

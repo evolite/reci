@@ -6,14 +6,14 @@ import { AuthCardHeader } from '@/components/AuthCardHeader';
 import { AlertCircle } from 'lucide-react';
 
 interface AuthPageLayoutProps {
-  title: string;
-  description: string;
-  error?: string;
-  success?: ReactNode;
-  children: ReactNode;
-  backLink?: {
-    to: string;
-    text: string;
+  readonly title: string;
+  readonly description: string;
+  readonly error?: string;
+  readonly success?: ReactNode;
+  readonly children: ReactNode;
+  readonly backLink?: {
+    readonly to: string;
+    readonly text: string;
   };
 }
 

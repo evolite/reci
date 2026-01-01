@@ -3,12 +3,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Copy, CheckCircle2 } from 'lucide-react';
 
 interface CopyButtonProps {
-  value: string;
-  copiedValue: string | null;
-  onCopy: (value: string) => void;
-  tooltipText: string;
-  variant?: 'ghost' | 'outline' | 'default';
-  size?: 'sm' | 'default' | 'lg';
+  readonly value: string;
+  readonly copiedValue: string | null;
+  readonly onCopy: (value: string) => void;
+  readonly tooltipText: string;
+  readonly variant?: 'ghost' | 'outline' | 'default';
+  readonly size?: 'sm' | 'default' | 'lg';
 }
 
 export function CopyButton({

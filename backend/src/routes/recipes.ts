@@ -176,7 +176,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     // Add rating data for each recipe
     const recipesWithRatings = await Promise.all(
       recipes.map(async (recipe) => {
-        const ratingData = await getRatingDataSafely(recipe.id, req.userId!);
+        const ratingData = await getRatingDataSafely(recipe.id, req.userId);
         return {
           ...recipe,
           ...ratingData,
@@ -226,7 +226,7 @@ router.get('/search', async (req: AuthRequest, res: Response) => {
     // Add rating data for each filtered recipe
     const recipesWithRatings = await Promise.all(
       filteredRecipes.map(async (recipe) => {
-        const ratingData = await getRatingDataSafely(recipe.id, req.userId!);
+        const ratingData = await getRatingDataSafely(recipe.id, req.userId);
         return {
           ...recipe,
           ...ratingData,
@@ -259,7 +259,7 @@ router.get('/random', async (req: AuthRequest, res: Response) => {
     }
 
     // Add rating data
-    const ratingData = await getRatingDataSafely(recipe.id, req.userId!);
+    const ratingData = await getRatingDataSafely(recipe.id, req.userId);
 
     const recipeWithRatings = {
       ...recipe,
@@ -285,7 +285,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
     }
 
     // Add rating data
-    const ratingData = await getRatingDataSafely(recipe.id, req.userId!);
+    const ratingData = await getRatingDataSafely(recipe.id, req.userId);
 
     const recipeWithRatings = {
       ...recipe,

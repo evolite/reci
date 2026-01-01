@@ -6,10 +6,10 @@ import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from '@/
 import { AlertTriangle, ShoppingCart } from 'lucide-react';
 
 interface ShoppingListContentProps {
-  shoppingList: ShoppingListResponse;
-  checkedItems: Set<string>;
-  onItemCheck: (sectionIndex: number, ingredientIndex: number, checked: boolean) => void;
-  useCardLayout?: boolean;
+  readonly shoppingList: ShoppingListResponse;
+  readonly checkedItems: Set<string>;
+  readonly onItemCheck: (sectionIndex: number, ingredientIndex: number, checked: boolean) => void;
+  readonly useCardLayout?: boolean;
 }
 
 export function ShoppingListContent({
@@ -119,7 +119,7 @@ export function ShoppingListContent({
       )}
 
       {/* Summary */}
-      <div className={`pt-2 text-sm text-muted-foreground ${!useCardLayout ? 'border-t' : ''}`}>
+      <div className={`pt-2 text-sm text-muted-foreground ${useCardLayout ? '' : 'border-t'}`}>
         <p>
           {shoppingList.recipesWithIngredients} of {shoppingList.totalRecipes} recipe{shoppingList.totalRecipes > 1 ? 's' : ''} included
         </p>

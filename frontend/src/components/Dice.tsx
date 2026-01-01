@@ -24,7 +24,7 @@ const dicePatterns: Record<number, number[]> = {
   6: [0, 2, 3, 5, 6, 8], // two columns of three
 };
 
-function DiceFace({ value, size }: { value: number; size: 'sm' | 'md' | 'lg' }) {
+function DiceFace({ value, size }: { readonly value: number; readonly size: 'sm' | 'md' | 'lg' }) {
   const pattern = dicePatterns[value] || [];
   const dotSize = dotSizeClasses[size];
 
