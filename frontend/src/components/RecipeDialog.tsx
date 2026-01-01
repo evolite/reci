@@ -103,17 +103,36 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent onClose={() => onOpenChange(false)} className="max-w-3xl">
-        <DialogHeader>
-          <div className="mb-2">
-            <DialogTitle className="text-2xl flex-1">{currentRecipe.dishName}</DialogTitle>
+      <DialogContent onClose={() => onOpenChange(false)} className="max-w-3xl p-0 flex flex-col max-h-[90vh] overflow-hidden">
+        {/* Pinned Header */}
+        <div className="flex-shrink-0 bg-background border-b px-6 pt-6 pb-4">
+          <DialogHeader>
+            <div className="mb-2">
+              <DialogTitle className="text-2xl flex-1 pr-8">{currentRecipe.dishName}</DialogTitle>
+            </div>
+          </DialogHeader>
+          
+          {/* View Source Button at Top */}
+          <div className="mt-4">
+            <Button
+              onClick={() => window.open(currentRecipe.videoUrl, '_blank')}
+              className="w-full bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700"
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              View Source
+            </Button>
           </div>
-          <div className="mb-2">
-            <DialogDescription className="flex-1">{currentRecipe.description}</DialogDescription>
-          </div>
-        </DialogHeader>
+        </div>
 
-        <div className="space-y-4">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
+          {/* Description */}
+          {currentRecipe.description && (
+            <DialogDescription className="text-sm text-muted-foreground">
+              {currentRecipe.description}
+            </DialogDescription>
+          )}
+          
           {/* Rating Section */}
           <div className="flex items-center gap-4 pb-2 border-b">
             <div className="flex items-center gap-2">
@@ -254,16 +273,6 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
               </Button>
             </div>
           )}
-
-          <div className="flex gap-2">
-            <Button
-              onClick={() => window.open(currentRecipe.videoUrl, '_blank')}
-              className="flex-1 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700"
-            >
-              <ExternalLink className="w-4 h-4 mr-2" />
-              View Source
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>

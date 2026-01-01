@@ -10,8 +10,9 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from '@/component
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useAddRecipe } from '@/hooks/useRecipes';
+import { useAddRecipe, useRecipes } from '@/hooks/useRecipes';
 import type { Recipe } from '@/lib/api';
+import { RecipeDialog } from './RecipeDialog';
 import { Plus, AlertCircle, CheckCircle2, Tag } from 'lucide-react';
 
 const addRecipeSchema = z.object({
@@ -22,8 +23,10 @@ type AddRecipeFormValues = z.infer<typeof addRecipeSchema>;
 
 export function AddRecipeForm() {
   const { mutate: addRecipe, isPending, error } = useAddRecipe();
+  const { data: existingRecipes = [] } = useRecipes();
   const [newlyAddedRecipe, setNewlyAddedRecipe] = useState<Recipe | null>(null);
   const [showRecipeDialog, setShowRecipeDialog] = useState(false);
+  const [showNewlyAddedDialog, setShowNewlyAddedDialog] = useState(false);
   const form = useForm<AddRecipeFormValues>({
     resolver: zodResolver(addRecipeSchema),
     defaultValues: {
@@ -33,11 +36,26 @@ export function AddRecipeForm() {
 
   const handleSubmit = (values: AddRecipeFormValues) => {
     if (values.url.trim()) {
-      addRecipe(values.url.trim(), {
+      const urlToAdd = values.url.trim();
+      // Check if recipe with this URL already exists (before API call)
+      const existingRecipeByUrl = existingRecipes.find(r => r.videoUrl === urlToAdd);
+      
+      addRecipe(urlToAdd, {
         onSuccess: (recipe: Recipe) => {
           form.reset();
-          setNewlyAddedRecipe(recipe);
-          setShowRecipeDialog(true);
+          // Check if recipe already exists by URL (exact match) or by ID (backend returned existing recipe)
+          const existingRecipeById = existingRecipes.find(r => r.id === recipe.id);
+          const isDuplicate = existingRecipeByUrl || existingRecipeById;
+          
+          if (isDuplicate) {
+            // Recipe already exists, open the recipe dialog
+            setNewlyAddedRecipe(recipe);
+            setShowRecipeDialog(true);
+          } else {
+            // New recipe, show the "newly added" dialog
+            setNewlyAddedRecipe(recipe);
+            setShowNewlyAddedDialog(true);
+          }
         },
       });
     }
@@ -95,8 +113,18 @@ export function AddRecipeForm() {
         )}
       </div>
 
-      <Dialog open={showRecipeDialog} onOpenChange={setShowRecipeDialog}>
-        <DialogContent onClose={() => setShowRecipeDialog(false)} className="max-w-2xl">
+      {/* Recipe Dialog - shown when recipe already exists */}
+      {newlyAddedRecipe && (
+        <RecipeDialog
+          recipe={newlyAddedRecipe}
+          open={showRecipeDialog}
+          onOpenChange={setShowRecipeDialog}
+        />
+      )}
+
+      {/* Newly Added Dialog - shown when recipe is newly created */}
+      <Dialog open={showNewlyAddedDialog} onOpenChange={setShowNewlyAddedDialog}>
+        <DialogContent onClose={() => setShowNewlyAddedDialog(false)} className="max-w-2xl">
           <DialogHeader>
             <div className="flex items-center gap-2 mb-2">
               <CheckCircle2 className="w-5 h-5 text-green-600" />
@@ -183,7 +211,7 @@ export function AddRecipeForm() {
           )}
 
           <DialogFooter>
-            <Button onClick={() => setShowRecipeDialog(false)} className="w-full sm:w-auto">
+            <Button onClick={() => setShowNewlyAddedDialog(false)} className="w-full sm:w-auto">
               Close
             </Button>
           </DialogFooter>

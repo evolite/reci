@@ -283,10 +283,36 @@ export async function getInviteStats(): Promise<{ stats: InviteStats }> {
 
 // Recipe API functions (updated to include auth)
 export async function addRecipe(videoUrl: string): Promise<Recipe> {
-  return apiRequest<Recipe>('/api/recipes', {
+  const response = await fetch(`${API_BASE_URL}/api/recipes`, {
     method: 'POST',
-    body: { videoUrl },
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ videoUrl }),
   });
+
+  // Handle 409 Conflict (recipe already exists) - return the existing recipe
+  if (response.status === 409) {
+    const data = await response.json();
+    if (data.recipe) {
+      return data.recipe as Recipe;
+    }
+    // If recipe is not in response, throw error
+    throw new Error(data.error || 'Recipe already exists');
+  }
+
+  // Handle 401 (unauthorized)
+  if (response.status === 401) {
+    handle401Response();
+    const errorMessage = await extractErrorFromResponse(response, 'Unauthorized');
+    throw new Error(errorMessage || 'Session expired. Please login again.');
+  }
+
+  // Handle other errors
+  if (!response.ok) {
+    const errorMessage = await extractErrorFromResponse(response, 'Failed to add recipe');
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
 }
 
 export async function getRecipes(): Promise<Recipe[]> {
