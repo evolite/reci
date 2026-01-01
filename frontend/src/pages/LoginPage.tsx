@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -8,12 +11,13 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { AlertCircle } from 'lucide-react';
 import { AuthCardHeader } from '@/components/AuthCardHeader';
-import { useState } from 'react';
 
-interface LoginFormValues {
-  email: string;
-  password: string;
-}
+const loginSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
   const [error, setError] = useState('');
@@ -21,6 +25,7 @@ export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       email: '',
       password: '',
@@ -59,7 +64,6 @@ export function LoginPage() {
               <FormField
                 control={form.control}
                 name="email"
-                rules={{ required: 'Email is required' }}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Email</FormLabel>
@@ -79,7 +83,6 @@ export function LoginPage() {
               <FormField
                 control={form.control}
                 name="password"
-                rules={{ required: 'Password is required' }}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Password</FormLabel>

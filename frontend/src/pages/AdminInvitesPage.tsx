@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { getInvites, createInvite, deleteInvite, getInviteStats, type Invite, type InviteStats } from '@/lib/api';
@@ -14,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from '@/components/ui/empty';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,10 +29,18 @@ import {
 } from '@/components/ui/alert-dialog';
 import { AlertCircle, Plus, Trash2, Copy, CheckCircle2, Users } from 'lucide-react';
 
-interface InviteFormValues {
-  email: string;
-  expires: string;
-}
+const inviteSchema = z.object({
+  email: z.string().optional().refine(
+    (val) => !val || val.trim() === '' || z.string().email().safeParse(val).success,
+    { message: 'Please enter a valid email address' }
+  ),
+  expires: z.string().optional().refine(
+    (val) => !val || val.trim() === '' || (!isNaN(Number(val)) && Number(val) > 0),
+    { message: 'Expires must be a positive number' }
+  ),
+});
+
+type InviteFormValues = z.infer<typeof inviteSchema>;
 
 export function AdminInvitesPage() {
   const { user } = useAuth();
@@ -48,6 +58,7 @@ export function AdminInvitesPage() {
   const [inviteIdToDelete, setInviteIdToDelete] = useState<string | null>(null);
   
   const inviteForm = useForm<InviteFormValues>({
+    resolver: zodResolver(inviteSchema),
     defaultValues: {
       email: '',
       expires: '',
@@ -280,6 +291,7 @@ export function AdminInvitesPage() {
                               {...field}
                             />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -297,6 +309,7 @@ export function AdminInvitesPage() {
                               {...field}
                             />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />

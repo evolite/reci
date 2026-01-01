@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { resetPassword } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -10,10 +12,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { AuthCardHeader } from '@/components/AuthCardHeader';
 
-interface ResetPasswordFormValues {
-  password: string;
-  confirmPassword: string;
-}
+const resetPasswordSchema = z.object({
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  confirmPassword: z.string().min(1, 'Please confirm your password'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
+});
+
+type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -23,6 +30,7 @@ export function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const form = useForm<ResetPasswordFormValues>({
+    resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
       password: '',
       confirmPassword: '',
@@ -84,10 +92,6 @@ export function ResetPasswordPage() {
                 <FormField
                   control={form.control}
                   name="password"
-                  rules={{ 
-                    required: 'Password is required',
-                    minLength: { value: 8, message: 'Password must be at least 8 characters' }
-                  }}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>New Password</FormLabel>
@@ -107,10 +111,6 @@ export function ResetPasswordPage() {
                 <FormField
                   control={form.control}
                   name="confirmPassword"
-                  rules={{ 
-                    required: 'Please confirm your password',
-                    validate: (value) => value === form.getValues('password') || 'Passwords do not match'
-                  }}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Confirm New Password</FormLabel>

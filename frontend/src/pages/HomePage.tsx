@@ -105,7 +105,7 @@ export function HomePage() {
                   Reci
                 </h1>
                 <p className="text-xs sm:text-sm text-muted-foreground -mt-1">
-                  Recipe Video Manager
+                  Discover and organize your favorite recipes
                 </p>
               </div>
             </div>
@@ -146,9 +146,6 @@ export function HomePage() {
               )}
             </div>
           </div>
-          <p className="text-sm sm:text-base text-muted-foreground ml-0 sm:ml-16">
-            Discover and organize your favorite recipe videos
-          </p>
         </header>
 
         {/* Add Recipe Form */}

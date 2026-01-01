@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
 import { forgotPassword } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -10,15 +12,18 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { AuthCardHeader } from '@/components/AuthCardHeader';
 
-interface ForgotPasswordFormValues {
-  email: string;
-}
+const forgotPasswordSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
+});
+
+type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
 export function ForgotPasswordPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const form = useForm<ForgotPasswordFormValues>({
+    resolver: zodResolver(forgotPasswordSchema),
     defaultValues: {
       email: '',
     },
@@ -65,7 +70,6 @@ export function ForgotPasswordPage() {
                 <FormField
                   control={form.control}
                   name="email"
-                  rules={{ required: 'Email is required' }}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Email</FormLabel>

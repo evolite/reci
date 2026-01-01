@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { getInvites, createInvite, deleteInvite, getInviteStats, type Invite, type InviteStats } from '@/lib/api';
@@ -15,7 +17,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from '@/components/ui/empty';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -39,10 +41,18 @@ import { AlertCircle, Plus, Trash2, Copy, CheckCircle2, Save, Settings, Users } 
 import { AVAILABLE_MODELS } from '@/lib/constants';
 import { useSettings } from '@/hooks/useSettings';
 
-interface InviteFormValues {
-  email: string;
-  expires: string;
-}
+const inviteSchema = z.object({
+  email: z.string().optional().refine(
+    (val) => !val || val.trim() === '' || z.string().email().safeParse(val).success,
+    { message: 'Please enter a valid email address' }
+  ),
+  expires: z.string().optional().refine(
+    (val) => !val || val.trim() === '' || (!isNaN(Number(val)) && Number(val) > 0),
+    { message: 'Expires must be a positive number' }
+  ),
+});
+
+type InviteFormValues = z.infer<typeof inviteSchema>;
 
 export function AdminPanelPage() {
   const { user } = useAuth();
@@ -74,6 +84,7 @@ export function AdminPanelPage() {
   } = useSettings();
   
   const inviteForm = useForm<InviteFormValues>({
+    resolver: zodResolver(inviteSchema),
     defaultValues: {
       email: '',
       expires: '',
@@ -281,6 +292,7 @@ export function AdminPanelPage() {
                                 placeholder="user@example.com"
                               />
                             </FormControl>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
@@ -298,6 +310,7 @@ export function AdminPanelPage() {
                                 min="1"
                               />
                             </FormControl>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />

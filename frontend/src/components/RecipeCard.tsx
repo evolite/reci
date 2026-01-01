@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Spinner } from '@/components/ui/spinner';
 import { Label } from '@/components/ui/label';
-import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +22,8 @@ import type { Recipe } from '@/lib/api';
 import { ExternalLink, Tag, Edit2, Save, X, Trash2, RefreshCw } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { updateRecipe, deleteRecipe, rescrapeAndAnalyzeRecipe, rateRecipe } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { RecipeDialog } from './RecipeDialog';
@@ -35,9 +37,11 @@ interface RecipeCardProps {
   readonly onDeselect?: (recipeId: string) => void;
 }
 
-interface TagFormValues {
-  tag: string;
-}
+const tagSchema = z.object({
+  tag: z.string().min(1, 'Tag cannot be empty').trim(),
+});
+
+type TagFormValues = z.infer<typeof tagSchema>;
 
 export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }: RecipeCardProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -61,6 +65,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
   const queryClient = useQueryClient();
   
   const tagForm = useForm<TagFormValues>({
+    resolver: zodResolver(tagSchema),
     defaultValues: {
       tag: '',
     },
@@ -89,7 +94,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
       e.stopPropagation();
     }
     const tagValue = values.tag.trim();
-    if (tagValue && !tags.includes(tagValue)) {
+    if (!tags.includes(tagValue)) {
       setTags([...tags, tagValue]);
       tagForm.reset();
     }
@@ -429,6 +434,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
                               {...field}
                             />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
