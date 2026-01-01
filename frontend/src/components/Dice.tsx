@@ -1,8 +1,10 @@
 import { cn } from '@/lib/utils';
 
+type DiceSize = 'sm' | 'md' | 'lg';
+
 interface DiceProps {
   readonly value: number | null; // 1-6 or null for placeholder
-  readonly size?: 'sm' | 'md' | 'lg';
+  readonly size?: DiceSize;
   readonly className?: string;
   readonly onClick?: (e?: React.MouseEvent) => void;
   readonly clickable?: boolean;
@@ -24,7 +26,7 @@ const dicePatterns: Record<number, number[]> = {
   6: [0, 2, 3, 5, 6, 8], // two columns of three
 };
 
-function DiceFace({ value, size }: { readonly value: number; readonly size: 'sm' | 'md' | 'lg' }) {
+function DiceFace({ value, size }: { readonly value: number; readonly size: DiceSize }) {
   const pattern = dicePatterns[value] || [];
   const dotSize = dotSizeClasses[size];
 
@@ -44,10 +46,17 @@ function DiceFace({ value, size }: { readonly value: number; readonly size: 'sm'
   );
 }
 
-function getSizeClasses(size: 'sm' | 'md' | 'lg'): string {
+function getSizeClasses(size: DiceSize): string {
   if (size === 'sm') return 'w-10 h-10';
   if (size === 'lg') return 'w-16 h-16';
   return 'w-12 h-12';
+}
+
+interface PlaceholderDiceProps {
+  readonly isClickable: boolean;
+  readonly size: DiceSize;
+  readonly className?: string;
+  readonly onClick?: (e?: React.MouseEvent) => void;
 }
 
 function PlaceholderDice({ 
@@ -55,12 +64,7 @@ function PlaceholderDice({
   size, 
   className, 
   onClick 
-}: { 
-  isClickable: boolean; 
-  size: 'sm' | 'md' | 'lg'; 
-  className?: string; 
-  onClick?: (e?: React.MouseEvent) => void;
-}) {
+}: PlaceholderDiceProps) {
   const Component = isClickable ? 'button' : 'div';
   return (
     <Component
@@ -79,19 +83,21 @@ function PlaceholderDice({
   );
 }
 
+interface RatedDiceProps {
+  readonly diceValue: number;
+  readonly isClickable: boolean;
+  readonly size: DiceSize;
+  readonly className?: string;
+  readonly onClick?: (e?: React.MouseEvent) => void;
+}
+
 function RatedDice({ 
   diceValue, 
   isClickable, 
   size, 
   className, 
   onClick 
-}: { 
-  diceValue: number; 
-  isClickable: boolean; 
-  size: 'sm' | 'md' | 'lg'; 
-  className?: string; 
-  onClick?: (e?: React.MouseEvent) => void;
-}) {
+}: RatedDiceProps) {
   const Component = isClickable ? 'button' : 'div';
   const title = isClickable ? `Your rating: ${diceValue} - Click to change` : `Rating: ${diceValue}`;
   
