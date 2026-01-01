@@ -44,48 +44,81 @@ function DiceFace({ value, size }: { readonly value: number; readonly size: 'sm'
   );
 }
 
-export function Dice({ value, size = 'md', className, onClick, clickable = false }: DiceProps) {
-  const isClickable = clickable || !!onClick;
+function getSizeClasses(size: 'sm' | 'md' | 'lg'): string {
+  if (size === 'sm') return 'w-10 h-10';
+  if (size === 'lg') return 'w-16 h-16';
+  return 'w-12 h-12';
+}
 
-  if (value === null || value === undefined) {
-    const Component = isClickable ? 'button' : 'div';
-    return (
-      <Component
-        type={isClickable ? 'button' : undefined}
-        onClick={onClick}
-        className={cn(
-          'flex items-center justify-center rounded-lg bg-muted text-muted-foreground border-2 border-dashed',
-          size === 'sm' && 'w-10 h-10',
-          size === 'md' && 'w-12 h-12',
-          size === 'lg' && 'w-16 h-16',
-          isClickable && 'cursor-pointer hover:bg-muted/80 hover:border-solid transition-all duration-200 hover:scale-105',
-          className
-        )}
-        title="Not rated - Click to rate"
-      >
-        <span className="text-xs font-medium">?</span>
-      </Component>
-    );
-  }
-
-  const diceValue = Math.max(1, Math.min(6, Math.round(value)));
+function PlaceholderDice({ 
+  isClickable, 
+  size, 
+  className, 
+  onClick 
+}: { 
+  isClickable: boolean; 
+  size: 'sm' | 'md' | 'lg'; 
+  className?: string; 
+  onClick?: (e?: React.MouseEvent) => void;
+}) {
   const Component = isClickable ? 'button' : 'div';
+  return (
+    <Component
+      type={isClickable ? 'button' : undefined}
+      onClick={onClick}
+      className={cn(
+        'flex items-center justify-center rounded-lg bg-muted text-muted-foreground border-2 border-dashed',
+        getSizeClasses(size),
+        isClickable && 'cursor-pointer hover:bg-muted/80 hover:border-solid transition-all duration-200 hover:scale-105',
+        className
+      )}
+      title="Not rated - Click to rate"
+    >
+      <span className="text-xs font-medium">?</span>
+    </Component>
+  );
+}
 
+function RatedDice({ 
+  diceValue, 
+  isClickable, 
+  size, 
+  className, 
+  onClick 
+}: { 
+  diceValue: number; 
+  isClickable: boolean; 
+  size: 'sm' | 'md' | 'lg'; 
+  className?: string; 
+  onClick?: (e?: React.MouseEvent) => void;
+}) {
+  const Component = isClickable ? 'button' : 'div';
+  const title = isClickable ? `Your rating: ${diceValue} - Click to change` : `Rating: ${diceValue}`;
+  
   return (
     <Component
       type={isClickable ? 'button' : undefined}
       onClick={onClick}
       className={cn(
         'flex items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-lg',
-        size === 'sm' && 'w-10 h-10',
-        size === 'md' && 'w-12 h-12',
-        size === 'lg' && 'w-16 h-16',
+        getSizeClasses(size),
         isClickable && 'cursor-pointer hover:from-orange-600 hover:to-amber-700 hover:shadow-xl transition-all duration-200 hover:scale-110 active:scale-105',
         className
       )}
-      title={isClickable ? `Your rating: ${diceValue} - Click to change` : `Rating: ${diceValue}`}
+      title={title}
     >
       <DiceFace value={diceValue} size={size} />
     </Component>
   );
+}
+
+export function Dice({ value, size = 'md', className, onClick, clickable = false }: DiceProps) {
+  const isClickable = clickable || !!onClick;
+
+  if (value === null || value === undefined) {
+    return <PlaceholderDice isClickable={isClickable} size={size} className={className} onClick={onClick} />;
+  }
+
+  const diceValue = Math.max(1, Math.min(6, Math.round(value)));
+  return <RatedDice diceValue={diceValue} isClickable={isClickable} size={size} className={className} onClick={onClick} />;
 }

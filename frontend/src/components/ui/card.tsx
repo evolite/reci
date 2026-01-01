@@ -39,7 +39,7 @@ const CardTitle = React.forwardRef<
       "text-2xl font-semibold leading-none tracking-tight",
       className
     )}
-    aria-label={!children ? "Card title" : undefined}
+    aria-label={children ? undefined : "Card title"}
     {...props}
   >
     {children}

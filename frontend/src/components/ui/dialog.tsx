@@ -81,7 +81,7 @@ const DialogTitle = React.forwardRef<
       "text-lg font-semibold leading-none tracking-tight",
       className
     )}
-    aria-label={!children ? "Dialog title" : undefined}
+    aria-label={children ? undefined : "Dialog title"}
     {...props}
   >
     {children}

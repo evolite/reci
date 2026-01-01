@@ -39,7 +39,7 @@ const AlertTitle = React.forwardRef<
   <h5
     ref={ref}
     className={cn("mb-1 font-medium leading-none tracking-tight", className)}
-    aria-label={!children ? "Alert title" : undefined}
+    aria-label={children ? undefined : "Alert title"}
     {...props}
   >
     {children}
