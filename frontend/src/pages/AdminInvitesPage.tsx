@@ -35,7 +35,7 @@ const inviteSchema = z.object({
     { message: 'Please enter a valid email address' }
   ),
   expires: z.string().optional().refine(
-    (val) => !val || val.trim() === '' || (!isNaN(Number(val)) && Number(val) > 0),
+    (val) => !val || val.trim() === '' || (!Number.isNaN(Number(val)) && Number(val) > 0),
     { message: 'Expires must be a positive number' }
   ),
 });

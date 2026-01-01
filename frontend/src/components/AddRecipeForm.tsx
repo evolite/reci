@@ -138,8 +138,8 @@ export function AddRecipeForm() {
                     <div>
                       <h4 className="font-semibold mb-2">Ingredients:</h4>
                       <ul className="list-disc list-inside space-y-1 text-sm">
-                        {newlyAddedRecipe.ingredients.map((ingredient, index) => (
-                          <li key={index}>{ingredient}</li>
+                        {newlyAddedRecipe.ingredients.map((ingredient) => (
+                          <li key={ingredient}>{ingredient}</li>
                         ))}
                       </ul>
                     </div>

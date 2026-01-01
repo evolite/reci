@@ -34,11 +34,19 @@ podman pull ghcr.io/evolite/reci-frontend:latest
 systemctl --user daemon-reload
 systemctl --user start services-network.service
 systemctl --user start reci-db.service
+```
+
+6. **Initialize the database** (first-time setup only):
+   
+   See [DATABASE_SETUP.md](../../DATABASE_SETUP.md) for detailed instructions.
+
+7. **Start the application services:**
+```bash
 systemctl --user start reci-backend.service
 systemctl --user start reci-frontend.service
 ```
 
-6. **Enable services** to start on boot (optional):
+8. **Enable services** to start on boot (optional):
 ```bash
 systemctl --user enable services-network.service
 systemctl --user enable reci-db.service

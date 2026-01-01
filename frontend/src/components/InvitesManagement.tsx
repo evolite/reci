@@ -31,7 +31,7 @@ const inviteSchema = z.object({
     { message: 'Please enter a valid email address' }
   ),
   expires: z.string().optional().refine(
-    (val) => !val || val.trim() === '' || (!isNaN(Number(val)) && Number(val) > 0),
+    (val) => !val || val.trim() === '' || (!Number.isNaN(Number(val)) && Number(val) > 0),
     { message: 'Expires must be a positive number' }
   ),
 });
@@ -292,13 +292,14 @@ export const InvitesManagement = forwardRef<InvitesManagementRef, InvitesManagem
       </Card>
 
       {/* Invites List */}
-      {loading ? (
+      {loading && (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-20 w-full bg-muted animate-pulse rounded" />
           ))}
         </div>
-      ) : invites.length === 0 ? (
+      )}
+      {!loading && invites.length === 0 && (
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -308,7 +309,8 @@ export const InvitesManagement = forwardRef<InvitesManagementRef, InvitesManagem
             <EmptyDescription>Create your first invite to get started</EmptyDescription>
           </EmptyHeader>
         </Empty>
-      ) : (
+      )}
+      {!loading && invites.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Invites</CardTitle>

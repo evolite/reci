@@ -74,6 +74,10 @@ PORT=4000
 VITE_API_BASE_URL=""
 ```
 
+### Database Setup
+
+See [DATABASE_SETUP.md](DATABASE_SETUP.md) for detailed instructions on setting up the database for first-time use.
+
 ### Installation
 
 1. **Clone the repo:**
@@ -82,16 +86,19 @@ git clone https://github.com/evolite/reci.git
 cd reci
 ```
 
-2. **Build and run with Podman:**
+2. **Set up the database** (see [DATABASE_SETUP.md](DATABASE_SETUP.md))
+
+3. **Build and run with Podman:**
 ```bash
 # Build images
 podman build -t localhost/reci-backend:latest ./backend
 podman build -t localhost/reci-frontend:latest ./frontend
 
-# Start services
+# Start services (database should be started first)
+systemctl --user start reci-db.service
+# Wait a few seconds for database to initialize, then:
 systemctl --user start reci-backend.service
 systemctl --user start reci-frontend.service
-systemctl --user start reci-db.service
 ```
 
 Or with Docker:

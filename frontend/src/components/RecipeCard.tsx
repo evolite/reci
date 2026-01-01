@@ -271,28 +271,21 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
                   aria-label={isSelected ? 'Deselect recipe' : 'Select recipe'}
                 />
               </button>
-              <div 
+              <button
+                type="button"
                 className="absolute bottom-2 right-2"
-                onClick={(e) => e.stopPropagation()}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.stopPropagation();
-                  }
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowRatingDialog(true);
                 }}
-                role="button"
-                tabIndex={0}
                 aria-label="Recipe rating"
               >
                 <Dice 
                   value={recipe.userRating ?? null} 
                   size="sm" 
-                  onClick={(e) => {
-                    e?.stopPropagation();
-                    setShowRatingDialog(true);
-                  }}
                   clickable
                 />
-              </div>
+              </button>
               <Button
                 onClick={handleEdit}
                 size="sm"

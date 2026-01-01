@@ -30,13 +30,13 @@ function DiceFace({ value, size }: { value: number; size: 'sm' | 'md' | 'lg' }) 
 
   return (
     <div className="grid grid-cols-3 gap-0.5 p-1">
-      {Array.from({ length: 9 }).map((_, index) => (
+      {Array.from({ length: 9 }, (_, index) => index).map((position) => (
         <div
-          key={index}
+          key={`dice-dot-${position}`}
           className={cn(
             'rounded-full bg-white',
             dotSize,
-            pattern.includes(index) ? 'opacity-100' : 'opacity-0'
+            pattern.includes(position) ? 'opacity-100' : 'opacity-0'
           )}
         />
       ))}
