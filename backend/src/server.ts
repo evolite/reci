@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -16,14 +17,18 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Middleware
-// CORS configuration - restrict to specific origins in production
+// Fail fast in production if CORS_ORIGIN is not set
 if (process.env.NODE_ENV === 'production' && !process.env.CORS_ORIGIN) {
-  console.warn('CORS_ORIGIN not set; CORS will allow all origins');
+  console.error('FATAL: CORS_ORIGIN must be set in production. Refusing to start with wildcard CORS.');
+  process.exit(1);
 }
 
+// Security headers
+app.use(helmet());
+
+// CORS configuration
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || '*', // In production, set CORS_ORIGIN to your frontend URL
+  origin: process.env.CORS_ORIGIN || '*',
   credentials: true,
   optionsSuccessStatus: 200,
 };

@@ -1,5 +1,5 @@
-// Email validation regex
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Email validation regex - requires TLD of at least 2 chars and valid domain structure
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 
 // Password strength requirements
 const MIN_PASSWORD_LENGTH = 8;
@@ -138,6 +138,8 @@ function validateHostname(hostname: string): { valid: boolean; error?: string } 
     '0.0.0.0',
     '::1',
     'localhost',
+    'metadata.google.internal',
+    '169.254.169.254',
   ];
   
   if (blockedHostnames.includes(lowerHostname)) {
@@ -152,9 +154,10 @@ function validateHostname(hostname: string): { valid: boolean; error?: string } 
     }
   }
   
-  // Check for IPv6 localhost
+  // Check for IPv6 localhost and IPv4-mapped private addresses
   if (hostname === '::1' || hostname.startsWith('::ffff:127.') || hostname.startsWith('::ffff:10.') ||
-      hostname.startsWith('::ffff:192.168.') || hostname.startsWith('::ffff:172.')) {
+      hostname.startsWith('::ffff:192.168.') || hostname.startsWith('::ffff:172.') ||
+      hostname.startsWith('::ffff:169.254.')) {
     return { valid: false, error: 'IPv6 localhost/private addresses are not allowed' };
   }
   

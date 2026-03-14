@@ -4,115 +4,125 @@ import { sanitizeInput } from '../utils/validation';
 import { prisma } from '../lib/prisma';
 import { getErrorMessage } from '../utils/errorHandler';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+interface AIConfig {
+  model: string;
+  baseURL?: string;
+  apiKey: string;
+}
 
-// Cache for model setting to avoid database queries on every request
-let modelCache: string | null = null;
-let modelCacheTime: number = 0;
+// Cache for AI config to avoid database queries on every request
+let configCache: AIConfig | null = null;
+let configCacheTime: number = 0;
 const CACHE_TTL = 60000; // 1 minute cache
 
-async function getOpenAIModel(): Promise<string> {
+function getProviderBaseURL(provider: string, customUrl: string): string | undefined {
+  switch (provider) {
+    case 'anthropic': return 'https://api.anthropic.com/v1';
+    case 'google': return 'https://generativelanguage.googleapis.com/v1beta/openai/';
+    case 'custom': return customUrl || undefined;
+    default: return undefined; // openai - use SDK default
+  }
+}
+
+async function getAIConfig(): Promise<AIConfig> {
   const now = Date.now();
-  
-  // Return cached value if still valid
-  if (modelCache && (now - modelCacheTime) < CACHE_TTL) {
-    return modelCache;
+
+  if (configCache && (now - configCacheTime) < CACHE_TTL) {
+    return configCache;
   }
-  
+
   try {
-    const setting = await prisma.setting.findUnique({
-      where: { key: 'openai_model' },
+    const settings = await prisma.setting.findMany({
+      where: { key: { in: ['ai_provider', 'ai_model', 'ai_api_key', 'ai_base_url', 'openai_model'] } },
     });
-    
-    if (setting) {
-      modelCache = setting.value;
-      modelCacheTime = now;
-      return setting.value;
-    }
+
+    const settingsMap: Record<string, string> = {};
+    settings.forEach(s => { settingsMap[s.key] = s.value; });
+
+    const provider = settingsMap['ai_provider'] || 'openai';
+    const model = settingsMap['ai_model'] || settingsMap['openai_model'] || 'gpt-4o-mini';
+    const apiKey = settingsMap['ai_api_key'] || process.env.OPENAI_API_KEY || '';
+    const customBaseUrl = settingsMap['ai_base_url'] || '';
+    const baseURL = getProviderBaseURL(provider, customBaseUrl);
+
+    configCache = { model, apiKey, ...(baseURL && { baseURL }) };
+    configCacheTime = now;
+    return configCache;
   } catch (error) {
-    console.error('Error fetching OpenAI model from settings:', error);
+    console.error('Error fetching AI config from settings:', error);
+    const fallback: AIConfig = {
+      model: 'gpt-4o-mini',
+      apiKey: process.env.OPENAI_API_KEY || '',
+    };
+    configCache = fallback;
+    configCacheTime = now;
+    return fallback;
   }
-  
-  // Fallback to default
-  const defaultModel = 'gpt-5-mini';
-  modelCache = defaultModel;
-  modelCacheTime = now;
-  return defaultModel;
 }
 
 // Function to clear cache (call this when settings are updated)
 export function clearModelCache() {
-  modelCache = null;
-  modelCacheTime = 0;
+  configCache = null;
+  configCacheTime = 0;
 }
 
-// Helper function to check if OpenAI API key is set
-function ensureOpenAIKey(): void {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY is not set');
-  }
-}
-
-// Helper function to create OpenAI completion with text message
+// Helper function to create OpenAI-compatible completion with text message
 async function createOpenAICompletion(
   systemMessage: string,
   userMessage: string,
   temperature: number = 0.3
 ): Promise<string> {
-  const model = await getOpenAIModel();
-  const completion = await openai.chat.completions.create({
-    model,
+  const config = await getAIConfig();
+  if (!config.apiKey) {
+    throw new Error('No AI API key configured. Set OPENAI_API_KEY environment variable or configure it in admin settings.');
+  }
+  const client = new OpenAI({
+    apiKey: config.apiKey,
+    ...(config.baseURL && { baseURL: config.baseURL }),
+  });
+
+  const completion = await client.chat.completions.create({
+    model: config.model,
     messages: [
-      {
-        role: 'system',
-        content: systemMessage,
-      },
-      {
-        role: 'user',
-        content: userMessage,
-      },
+      { role: 'system', content: systemMessage },
+      { role: 'user', content: userMessage },
     ],
     temperature,
   });
 
   const content = completion.choices[0]?.message?.content;
   if (!content) {
-    throw new Error('No response from OpenAI');
+    throw new Error('No response from AI');
   }
 
   return content;
 }
 
-// Helper function to create OpenAI completion with vision (text + image)
+// Helper function to create OpenAI-compatible completion with vision (text + image)
 async function createOpenAIVisionCompletion(
   systemMessage: string,
   textPrompt: string,
   imageUrl: string,
   temperature: number = 0.3
 ): Promise<string> {
-  const model = await getOpenAIModel();
-  const completion = await openai.chat.completions.create({
-    model,
+  const config = await getAIConfig();
+  if (!config.apiKey) {
+    throw new Error('No AI API key configured. Set OPENAI_API_KEY environment variable or configure it in admin settings.');
+  }
+  const client = new OpenAI({
+    apiKey: config.apiKey,
+    ...(config.baseURL && { baseURL: config.baseURL }),
+  });
+
+  const completion = await client.chat.completions.create({
+    model: config.model,
     messages: [
-      {
-        role: 'system',
-        content: systemMessage,
-      },
+      { role: 'system', content: systemMessage },
       {
         role: 'user',
         content: [
-          {
-            type: 'text',
-            text: textPrompt,
-          },
-          {
-            type: 'image_url',
-            image_url: {
-              url: imageUrl,
-            },
-          },
+          { type: 'text', text: textPrompt },
+          { type: 'image_url', image_url: { url: imageUrl } },
         ],
       },
     ],
@@ -121,7 +131,7 @@ async function createOpenAIVisionCompletion(
 
   const content = completion.choices[0]?.message?.content;
   if (!content) {
-    throw new Error('No response from OpenAI');
+    throw new Error('No response from AI');
   }
 
   return content;
@@ -136,7 +146,7 @@ function buildCommentsText(comments: string[]): string {
 }
 
 function buildRecipePrompt(title: string, description: string, commentsText: string): string {
-  return `Analyze the following recipe content (from a video, blog post, or recipe website) and extract ALL relevant information. Return ONLY a valid JSON object with no additional text. 
+  return `Analyze the following recipe content (from a video, blog post, or recipe website) and extract ALL relevant information. Return ONLY a valid JSON object with no additional text.
 
 IMPORTANT: Even if the title or description is minimal or unclear, you MUST still return a valid JSON object with your best guess for the dish name, cuisine type, and ingredients based on what information is available. Do NOT return an error object - always return the required JSON structure.
 
@@ -167,7 +177,7 @@ CRITICAL: The instructions field must contain ONLY the step-by-step cooking inst
 - Any ingredient measurements or amounts
 - Only include the actual cooking steps, methods, and techniques
 
-Format clearly with numbered steps or paragraphs. Include cooking times, temperatures (in °C), and all important details. IMPORTANT: Convert temperatures to Celsius (°F to °C: (°F - 32) × 5/9). 
+Format clearly with numbered steps or paragraphs. Include cooking times, temperatures (in °C), and all important details. IMPORTANT: Convert temperatures to Celsius (°F to °C: (°F - 32) × 5/9).
 
 If the recipe text contains both ingredients and instructions, you MUST:
 1. Extract all ingredients (with amounts) into the ingredients array
@@ -214,22 +224,22 @@ function isRecipeAnalysis(obj: unknown): obj is RecipeAnalysis {
 function parseAndValidateResponse(cleanedContent: string, sanitizedTitle: string, sanitizedDescription: string): RecipeAnalysis {
   try {
     const parsed: unknown = JSON.parse(cleanedContent);
-    
+
     if (typeof parsed === 'object' && parsed !== null && 'error' in parsed && !('dishName' in parsed)) {
-      console.warn('OpenAI returned an error object. Creating fallback recipe data from available information.');
+      console.warn('AI returned an error object. Creating fallback recipe data from available information.');
       return createFallbackAnalysis(sanitizedTitle, sanitizedDescription);
     }
-    
+
     // Type guard to ensure parsed is RecipeAnalysis
     if (isRecipeAnalysis(parsed)) {
       return parsed;
     }
-    
+
     // Fallback if parsing fails
     return createFallbackAnalysis(sanitizedTitle, sanitizedDescription);
   } catch (parseError) {
-    console.error('Failed to parse OpenAI response. Raw content:', cleanedContent.substring(0, 500));
-    throw new Error(`Failed to parse JSON response from OpenAI: ${getErrorMessage(parseError)}`);
+    console.error('Failed to parse AI response. Raw content:', cleanedContent.substring(0, 500));
+    throw new Error(`Failed to parse JSON response from AI: ${getErrorMessage(parseError)}`);
   }
 }
 
@@ -237,9 +247,9 @@ function validateAnalysisStructure(analysis: RecipeAnalysis, sanitizedTitle: str
   if (analysis.dishName && analysis.cuisineType && Array.isArray(analysis.mainIngredients)) {
     return analysis;
   }
-  
-  console.error('Invalid OpenAI response structure. Received:', JSON.stringify(analysis, null, 2));
-  
+
+  console.error('Invalid AI response structure. Received:', JSON.stringify(analysis, null, 2));
+
   const validated = { ...analysis };
   if (!validated.dishName) {
     validated.dishName = sanitizedTitle || 'Unknown Dish';
@@ -250,13 +260,13 @@ function validateAnalysisStructure(analysis: RecipeAnalysis, sanitizedTitle: str
   if (!Array.isArray(validated.mainIngredients)) {
     validated.mainIngredients = [];
   }
-  
+
   console.warn('Using fallback values for missing fields:', {
     dishName: validated.dishName,
     cuisineType: validated.cuisineType,
     mainIngredients: validated.mainIngredients
   });
-  
+
   return validated;
 }
 
@@ -265,12 +275,10 @@ export async function analyzeRecipe(
   description: string,
   comments?: string[]
 ): Promise<RecipeAnalysis> {
-  ensureOpenAIKey();
-
   // Sanitize inputs to prevent prompt injection
   const sanitizedTitle = sanitizeInput(title, 500);
   const sanitizedDescription = sanitizeInput(description.substring(0, 2000), 2000);
-  const sanitizedComments = comments && comments.length > 0 
+  const sanitizedComments = comments && comments.length > 0
     ? comments.slice(0, 5).map(c => sanitizeInput(c, 2000))
     : [];
 
@@ -288,15 +296,13 @@ export async function analyzeRecipe(
     return analysis;
   } catch (error) {
     if (error instanceof Error) {
-      throw new Error(`Failed to analyze recipe with OpenAI: ${error.message}`);
+      throw new Error(`Failed to analyze recipe with AI: ${error.message}`);
     }
     throw error;
   }
 }
 
 export async function analyzeRecipeFromText(recipeText: string): Promise<RecipeAnalysis> {
-  ensureOpenAIKey();
-
   // Sanitize input to prevent prompt injection
   const sanitizedRecipeText = sanitizeInput(recipeText, 50000); // Max 50KB for recipe text
 
@@ -341,7 +347,7 @@ CRITICAL: The instructions field must contain ONLY the step-by-step cooking inst
 - Any lines that list ingredients with quantities
 - Only include the actual cooking steps, methods, and techniques
 
-Format clearly with numbered steps or paragraphs. Include cooking times, temperatures (in °C), and all important details. IMPORTANT: Convert temperatures to Celsius (°F to °C: (°F - 32) × 5/9). 
+Format clearly with numbered steps or paragraphs. Include cooking times, temperatures (in °C), and all important details. IMPORTANT: Convert temperatures to Celsius (°F to °C: (°F - 32) × 5/9).
 
 If the recipe text contains both ingredients and instructions, you MUST:
 1. Extract all ingredients (with amounts) into the ingredients array - these go in the "ingredients" field, NOT in "instructions"
@@ -372,28 +378,26 @@ Return only the JSON object, no markdown formatting, no code blocks.`;
         throw new Error('Invalid RecipeAnalysis structure');
       }
     } catch (parseError) {
-      console.error('Failed to parse OpenAI response (from text). Raw content:', cleanedContent.substring(0, 500));
-      throw new Error(`Failed to parse JSON response from OpenAI: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+      console.error('Failed to parse AI response (from text). Raw content:', cleanedContent.substring(0, 500));
+      throw new Error(`Failed to parse JSON response from AI: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
     }
 
     // Validate the response structure
     if (!analysis.dishName || !analysis.cuisineType || !Array.isArray(analysis.mainIngredients)) {
-      console.error('Invalid OpenAI response structure (from text). Received:', JSON.stringify(analysis, null, 2));
-      throw new Error(`Invalid response structure from OpenAI. Missing required fields: dishName=${!!analysis.dishName}, cuisineType=${!!analysis.cuisineType}, mainIngredients=${Array.isArray(analysis.mainIngredients)}`);
+      console.error('Invalid AI response structure (from text). Received:', JSON.stringify(analysis, null, 2));
+      throw new Error(`Invalid response structure from AI. Missing required fields: dishName=${!!analysis.dishName}, cuisineType=${!!analysis.cuisineType}, mainIngredients=${Array.isArray(analysis.mainIngredients)}`);
     }
 
     return analysis;
   } catch (error) {
     if (error instanceof Error) {
-      throw new Error(`Failed to analyze recipe text with OpenAI: ${error.message}`);
+      throw new Error(`Failed to analyze recipe text with AI: ${error.message}`);
     }
     throw error;
   }
 }
 
 export async function analyzeRecipeWithVision(thumbnailUrl: string, title: string, description: string): Promise<RecipeAnalysis> {
-  ensureOpenAIKey();
-
   try {
     // Fetch the thumbnail image
     const imageResponse = await fetch(thumbnailUrl);
@@ -451,14 +455,14 @@ Return only the JSON object, no markdown formatting, no code blocks.`;
         throw new Error('Invalid RecipeAnalysis structure');
       }
     } catch (parseError) {
-      console.error('Failed to parse OpenAI response (vision). Raw content:', cleanedContent.substring(0, 500));
-      throw new Error(`Failed to parse JSON response from OpenAI: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+      console.error('Failed to parse AI response (vision). Raw content:', cleanedContent.substring(0, 500));
+      throw new Error(`Failed to parse JSON response from AI: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
     }
 
     // Validate the response structure
     if (!analysis.dishName || !analysis.cuisineType || !Array.isArray(analysis.mainIngredients)) {
-      console.error('Invalid OpenAI response structure (vision). Received:', JSON.stringify(analysis, null, 2));
-      throw new Error(`Invalid response structure from OpenAI. Missing required fields: dishName=${!!analysis.dishName}, cuisineType=${!!analysis.cuisineType}, mainIngredients=${Array.isArray(analysis.mainIngredients)}`);
+      console.error('Invalid AI response structure (vision). Received:', JSON.stringify(analysis, null, 2));
+      throw new Error(`Invalid response structure from AI. Missing required fields: dishName=${!!analysis.dishName}, cuisineType=${!!analysis.cuisineType}, mainIngredients=${Array.isArray(analysis.mainIngredients)}`);
     }
 
     return analysis;
@@ -477,8 +481,6 @@ export interface RecipeForShoppingList {
 }
 
 export async function generateShoppingList(recipes: RecipeForShoppingList[]): Promise<ShoppingListResponse> {
-  ensureOpenAIKey();
-
   // Separate recipes with and without ingredients
   const recipesWithIngredients = recipes.filter(r => r.ingredients && r.ingredients.length > 0);
   const missingRecipes = recipes.filter(r => !r.ingredients || r.ingredients.length === 0);
@@ -573,14 +575,14 @@ Return only the JSON object, no markdown formatting, no code blocks, no addition
     try {
       shoppingList = JSON.parse(cleanedContent) as { sections: Array<{ name: string; ingredients: string[] }> };
     } catch (parseError) {
-      console.error('Failed to parse OpenAI shopping list response. Raw content:', cleanedContent.substring(0, 500));
-      throw new Error(`Failed to parse JSON response from OpenAI: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+      console.error('Failed to parse AI shopping list response. Raw content:', cleanedContent.substring(0, 500));
+      throw new Error(`Failed to parse JSON response from AI: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
     }
 
     // Validate the response structure
     if (!Array.isArray(shoppingList.sections)) {
-      console.error('Invalid OpenAI shopping list response structure. Received:', JSON.stringify(shoppingList, null, 2));
-      throw new Error('Invalid response structure from OpenAI: sections must be an array');
+      console.error('Invalid AI shopping list response structure. Received:', JSON.stringify(shoppingList, null, 2));
+      throw new Error('Invalid response structure from AI: sections must be an array');
     }
 
     return {
@@ -591,7 +593,7 @@ Return only the JSON object, no markdown formatting, no code blocks, no addition
     };
   } catch (error) {
     if (error instanceof Error) {
-      throw new Error(`Failed to generate shopping list with OpenAI: ${error.message}`);
+      throw new Error(`Failed to generate shopping list with AI: ${error.message}`);
     }
     throw error;
   }

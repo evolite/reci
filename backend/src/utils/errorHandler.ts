@@ -36,7 +36,7 @@ export function handleRouteError(
       return;
     }
     
-    res.status(500).json({ error: error.message || defaultMessage });
+    res.status(500).json({ error: process.env.NODE_ENV === 'production' ? defaultMessage : (error.message || defaultMessage) });
   } else {
     res.status(500).json({ error: defaultMessage });
   }

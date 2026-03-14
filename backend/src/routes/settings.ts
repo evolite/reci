@@ -70,8 +70,8 @@ router.put('/:key', async (req: AuthRequest, res: Response) => {
       },
     });
     
-    // Clear model cache if OpenAI model was updated
-    if (key === 'openai_model') {
+    // Clear AI config cache if any AI setting was updated
+    if (['ai_provider', 'ai_model', 'ai_api_key', 'ai_base_url', 'openai_model'].includes(key)) {
       clearModelCache();
     }
     

@@ -1,11 +1,28 @@
 import { Router, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { prisma } from '../lib/prisma';
 import { validateEmail, normalizeEmail } from '../utils/validation';
 
 const router = Router();
 
+const waitlistJoinLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  message: 'Too many waitlist requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const waitlistReadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30,
+  message: 'Too many requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // POST /api/waitlist - Join the waitlist
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', waitlistJoinLimiter, async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
 
@@ -54,7 +71,7 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // GET /api/waitlist/position/:email - Get waitlist position (public)
-router.get('/position/:email', async (req: Request, res: Response) => {
+router.get('/position/:email', waitlistReadLimiter, async (req: Request, res: Response) => {
   try {
     const { email } = req.params;
 
@@ -86,7 +103,7 @@ router.get('/position/:email', async (req: Request, res: Response) => {
 });
 
 // GET /api/waitlist/stats - Get waitlist statistics (public)
-router.get('/stats', async (req: Request, res: Response) => {
+router.get('/stats', waitlistReadLimiter, async (req: Request, res: Response) => {
   try {
     const total = await prisma.waitlist.count();
     res.json({ total });

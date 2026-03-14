@@ -17,7 +17,8 @@ model User {
   name                  String?
   isAdmin               Boolean   @default(false)
   emailVerified         Boolean   @default(false)
-  emailVerificationToken String?
+  emailVerificationToken        String?
+  emailVerificationTokenExpires DateTime?
   passwordResetToken    String?
   passwordResetExpires  DateTime?
   createdAt             DateTime  @default(now())

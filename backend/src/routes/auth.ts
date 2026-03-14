@@ -33,6 +33,14 @@ const forgotPasswordLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const checkInviteLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // 20 checks per window
+  message: 'Too many invite check requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Account lockout tracking (in-memory, consider moving to Redis in production)
 interface LockoutInfo {
   attempts: number;
@@ -126,6 +134,8 @@ router.post('/register', registerLimiter, async (req: Request, res: Response) =>
     const passwordHash = await hashPassword(password);
 
     // Create user
+    const emailVerificationExpires = new Date();
+    emailVerificationExpires.setHours(emailVerificationExpires.getHours() + 24); // 24-hour expiry
     const user = await prisma.user.create({
       data: {
         email: normalizedEmail,
@@ -133,6 +143,7 @@ router.post('/register', registerLimiter, async (req: Request, res: Response) =>
         name: name ? name.trim().substring(0, 100) : null, // Sanitize name
         isAdmin,
         emailVerificationToken: generateVerificationToken(),
+        emailVerificationTokenExpires: emailVerificationExpires,
       },
       select: {
         id: true,
@@ -265,11 +276,16 @@ router.post('/verify-email', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid verification token' });
     }
 
+    if (user.emailVerificationTokenExpires && user.emailVerificationTokenExpires < new Date()) {
+      return res.status(400).json({ error: 'Verification token has expired' });
+    }
+
     await prisma.user.update({
       where: { id: user.id },
       data: {
         emailVerified: true,
         emailVerificationToken: null,
+        emailVerificationTokenExpires: null,
       },
     });
 
@@ -380,7 +396,7 @@ router.post('/reset-password', async (req: Request, res: Response) => {
 });
 
 // GET /api/auth/check-invite/:token - Check if invite token is valid (public, for signup page)
-router.get('/check-invite/:token', async (req: Request, res: Response) => {
+router.get('/check-invite/:token', checkInviteLimiter, async (req: Request, res: Response) => {
   try {
     const { token } = req.params;
 

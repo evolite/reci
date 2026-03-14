@@ -18,6 +18,7 @@ RUN npm run build
 
 # Stage 3: Production
 FROM node:20-alpine AS production
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001 -G nodejs
 WORKDIR /app
 COPY backend/package.json ./
 COPY backend/prisma ./prisma/
@@ -25,6 +26,7 @@ COPY --from=backend-builder /backend/node_modules ./node_modules
 COPY --from=backend-builder /backend/dist ./dist
 COPY --from=frontend-builder /frontend/dist ./public
 COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh && mkdir -p /data
+RUN chmod +x /docker-entrypoint.sh && mkdir -p /data && chown -R nodejs:nodejs /app /data
+USER nodejs
 EXPOSE 4000
 ENTRYPOINT ["/docker-entrypoint.sh"]
