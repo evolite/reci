@@ -1,0 +1,20 @@
+[Unit]
+Description=Reci - Recipe Manager
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/evolite/reci:latest
+ContainerName=reci
+PublishPort=4000:4000
+Volume=reci-data:/data
+EnvironmentFile=/path/to/your/.env
+Environment=NODE_ENV=production
+AutoUpdate=registry
+
+[Service]
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

@@ -1,7 +1,7 @@
 {
-  "name": "backend",
+  "name": "reci-backend",
   "version": "1.0.0",
-  "description": "Recipe Video Manager Backend API",
+  "description": "Reci - Recipe Manager API",
   "main": "dist/server.js",
   "scripts": {
     "dev": "nodemon --exec ts-node src/server.ts",
