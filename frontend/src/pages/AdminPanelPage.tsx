@@ -153,7 +153,7 @@ export function AdminPanelPage() {
                     onChange={(e) => setBaseUrl(e.target.value)}
                     placeholder="https://api.openai.com/v1"
                     readOnly={!isCustomProvider}
-                    className={!isCustomProvider ? 'opacity-60 cursor-not-allowed' : ''}
+                    className={isCustomProvider ? '' : 'opacity-60 cursor-not-allowed'}
                   />
                   {!isCustomProvider && (
                     <p className="text-xs text-muted-foreground">

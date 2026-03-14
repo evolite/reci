@@ -657,8 +657,8 @@ export async function getVideoMetadata(url: string): Promise<VideoMetadata> {
     ({ title, description, thumbnailUrl } = applyFallbackExtraction(html, $, title, description, thumbnailUrl));
     
     // Log what we extracted for debugging
-    console.log(`Extracted metadata for ${platform || 'unknown'} platform:`, {
-      title: title.substring(0, 100),
+    console.log('Extracted video metadata:', {
+      titleLength: title.length,
       descriptionLength: description.length,
       hasThumbnail: !!thumbnailUrl,
     });

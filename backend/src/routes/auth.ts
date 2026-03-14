@@ -330,8 +330,9 @@ router.post('/forgot-password', forgotPasswordLimiter, async (req: Request, res:
       },
     });
 
-    // TODO: Send email with reset token
-    // For now, just return success (token stored in DB)
+    // Email delivery is not yet configured. The reset token is persisted in the
+    // database; integrate an email provider (e.g. Resend, SendGrid) here to
+    // deliver the link to the user.
 
     res.json({ message: 'If an account exists, a password reset link has been sent' });
   } catch (error) {

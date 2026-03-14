@@ -41,56 +41,54 @@ export function AddRecipeForm() {
   };
 
   return (
-    <>
-      <div className="w-full">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col sm:flex-row gap-2">
-            <FormField
-              control={form.control}
-              name="url"
-              render={({ field }) => (
-                <FormItem className="flex-1">
-                  <FormControl>
-                    <Input
-                      type="url"
-                      placeholder="Paste recipe URL (video, blog post, recipe site, etc.)"
-                      disabled={isPending}
-                      className="text-sm sm:text-base"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button 
-              type="submit" 
-              disabled={isPending || !form.watch('url')?.trim()}
-              className="bg-brand-gradient-r text-white shadow-md"
-            >
-              {isPending ? (
-                <span className="flex items-center gap-2">
-                  <Spinner className="text-white" />
-                  Adding...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  Add Recipe
-                </span>
-              )}
-            </Button>
-          </form>
-        </Form>
-        {error && (
-          <Alert variant="destructive" className="mt-2">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              {error instanceof Error ? error.message : 'Failed to add recipe'}
-            </AlertDescription>
-          </Alert>
-        )}
-      </div>
-    </>
+    <div className="w-full">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col sm:flex-row gap-2">
+          <FormField
+            control={form.control}
+            name="url"
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormControl>
+                  <Input
+                    type="url"
+                    placeholder="Paste recipe URL (video, blog post, recipe site, etc.)"
+                    disabled={isPending}
+                    className="text-sm sm:text-base"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button
+            type="submit"
+            disabled={isPending || !form.watch('url')?.trim()}
+            className="bg-brand-gradient-r text-white shadow-md"
+          >
+            {isPending ? (
+              <span className="flex items-center gap-2">
+                <Spinner className="text-white" />
+                Adding...
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                Add Recipe
+              </span>
+            )}
+          </Button>
+        </form>
+      </Form>
+      {error && (
+        <Alert variant="destructive" className="mt-2">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {error instanceof Error ? error.message : 'Failed to add recipe'}
+          </AlertDescription>
+        </Alert>
+      )}
+    </div>
   );
 }

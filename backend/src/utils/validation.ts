@@ -1,5 +1,5 @@
 // Email validation regex - requires TLD of at least 2 chars and valid domain structure
-const EMAIL_REGEX = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 // Password strength requirements
 const MIN_PASSWORD_LENGTH = 8;
