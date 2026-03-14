@@ -6,6 +6,8 @@
 
 A personal recipe video library. Paste a YouTube/TikTok/Instagram URL — AI extracts the recipe, ingredients, and instructions. Everything runs in a single container with SQLite.
 
+![Reci screenshot](docs/screenshot.png)
+
 ## Quick Start
 
 ```bash
