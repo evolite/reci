@@ -1,8 +1,6 @@
 # Reci
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub release](https://img.shields.io/github/v/release/evolite/reci)](https://github.com/evolite/reci/releases)
-[![GitHub issues](https://img.shields.io/github/issues/evolite/reci)](https://github.com/evolite/reci/issues)
 
 A personal recipe video library. Paste a YouTube/TikTok/Instagram URL — AI extracts the recipe, ingredients, and instructions. Everything runs in a single container with SQLite.
 
