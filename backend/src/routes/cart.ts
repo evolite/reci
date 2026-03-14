@@ -5,6 +5,7 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { ShoppingCartRequest, ShoppingCartResponse, SharedCartResponse, ShareCartResponse } from '../models/ShoppingCart';
 import { randomUUID } from 'node:crypto';
 import { handleRouteError, validateArray } from '../utils/errorHandler';
+import { serializeArray, deserializeArray } from '../lib/sqliteHelpers';
 
 // Authenticated routes
 const router = Router();
@@ -26,9 +27,9 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     const response: ShoppingCartResponse = {
       id: cart.id,
       userId: cart.userId,
-      recipeIds: cart.recipeIds,
+      recipeIds: deserializeArray(cart.recipeIds as unknown as string),
       shoppingList: cart.shoppingList as any,
-      checkedItems: cart.checkedItems,
+      checkedItems: deserializeArray(cart.checkedItems as unknown as string),
       shareToken: cart.shareToken,
       createdAt: cart.createdAt.toISOString(),
       updatedAt: cart.updatedAt.toISOString(),
@@ -53,25 +54,25 @@ router.put('/', async (req: AuthRequest, res: Response) => {
     const cart = await prisma.shoppingCart.upsert({
       where: { userId },
       update: {
-        recipeIds,
+        recipeIds: serializeArray(recipeIds),
         shoppingList: shoppingList as any,
-        checkedItems: checkedItems || [],
+        checkedItems: serializeArray(checkedItems || []),
         updatedAt: new Date(),
       },
       create: {
         userId,
-        recipeIds,
+        recipeIds: serializeArray(recipeIds),
         shoppingList: shoppingList as any,
-        checkedItems: checkedItems || [],
+        checkedItems: serializeArray(checkedItems || []),
       },
     });
 
     const response: ShoppingCartResponse = {
       id: cart.id,
       userId: cart.userId,
-      recipeIds: cart.recipeIds,
+      recipeIds: deserializeArray(cart.recipeIds as unknown as string),
       shoppingList: cart.shoppingList as any,
-      checkedItems: cart.checkedItems,
+      checkedItems: deserializeArray(cart.checkedItems as unknown as string),
       shareToken: cart.shareToken,
       createdAt: cart.createdAt.toISOString(),
       updatedAt: cart.updatedAt.toISOString(),
@@ -177,7 +178,7 @@ publicRouter.get('/shared/:shareToken', async (req: Request, res: Response) => {
 
     const response: SharedCartResponse = {
       shoppingList: cart.shoppingList as any,
-      checkedItems: cart.checkedItems,
+      checkedItems: deserializeArray(cart.checkedItems as unknown as string),
       ownerName: cart.user.name,
       shareToken: cart.shareToken!,
     };
@@ -224,7 +225,7 @@ publicRouter.put('/shared/:shareToken', sharedCartLimiter, async (req: Request, 
     await prisma.shoppingCart.update({
       where: { shareToken },
       data: {
-        checkedItems,
+        checkedItems: serializeArray(checkedItems),
         updatedAt: new Date(),
       },
     });

@@ -69,9 +69,9 @@ export function SharedCartPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-brand-page flex items-center justify-center">
         <div className="flex flex-col items-center">
-          <Spinner className="w-8 h-8 text-orange-500 mb-4" />
+          <Spinner className="w-8 h-8 text-brand mb-4" />
           <p className="text-sm text-muted-foreground">Loading shared cart...</p>
         </div>
       </div>
@@ -80,7 +80,7 @@ export function SharedCartPage() {
 
   if (error || !cart) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-brand-page flex items-center justify-center p-4">
         <div className="max-w-md w-full">
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
@@ -99,16 +99,16 @@ export function SharedCartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen bg-brand-page">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-br from-orange-500 to-amber-600 p-2.5 rounded-xl shadow-lg">
+              <div className="bg-brand-gradient p-2.5 rounded-xl shadow-lg">
                 <ShoppingCart className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+                <h1 className="text-3xl font-bold text-brand-gradient-short">
                   Shared Shopping Cart
                 </h1>
                 {cart.ownerName && (
@@ -150,7 +150,7 @@ export function SharedCartPage() {
               {cart.shoppingList.sections.map((section, sectionIndex) => (
                 <Card key={section.name}>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg text-orange-600 dark:text-orange-400">
+                    <CardTitle className="text-lg text-brand-text">
                       {section.name}
                     </CardTitle>
                   </CardHeader>

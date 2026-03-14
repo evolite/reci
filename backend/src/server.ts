@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
 import recipeRoutes from './routes/recipes';
 import authRoutes from './routes/auth';
 import inviteRoutes from './routes/invites';
@@ -17,7 +19,7 @@ const PORT = process.env.PORT || 4000;
 // Middleware
 // CORS configuration - restrict to specific origins in production
 if (process.env.NODE_ENV === 'production' && !process.env.CORS_ORIGIN) {
-  throw new Error('CORS_ORIGIN environment variable is required in production');
+  console.warn('CORS_ORIGIN not set; CORS will allow all origins');
 }
 
 const corsOptions = {
@@ -42,6 +44,21 @@ app.use('/api/settings', settingsRoutes);
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
+
+// Static frontend + SPA fallback
+const staticDir = path.join(__dirname, '..', 'public');
+if (fs.existsSync(staticDir)) {
+  app.use(express.static(staticDir, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+    },
+  }));
+  app.use((req, res) => {
+    res.sendFile(path.join(staticDir, 'index.html'));
+  });
+}
 
 // Start server
 app.listen(PORT, () => {

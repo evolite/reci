@@ -47,7 +47,7 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-brand-page flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <AuthCardHeader title="Welcome Back" description="Login to your Reci account" />
@@ -108,7 +108,7 @@ export function LoginPage() {
                 </Link>
                 <div className="text-sm text-muted-foreground">
                   Don't have an account?{' '}
-                  <Link to="/signup" className="hover:underline text-orange-600">
+                  <Link to="/signup" className="hover:underline text-brand-text">
                     Sign up
                   </Link>
                 </div>

@@ -26,11 +26,11 @@ export function RandomButton() {
         onClick={handleClick} 
         disabled={isFetching}
         variant="outline"
-        className="w-full sm:w-auto border-2 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950"
+        className="w-full sm:w-auto border-2 border-brand-border hover:bg-brand-subtle dark:hover:bg-brand-dark"
       >
         {isFetching ? (
           <span className="flex items-center gap-2">
-            <Spinner className="text-orange-600" />
+            <Spinner className="text-brand-text" />
             <span className="hidden sm:inline">Loading...</span>
           </span>
         ) : (

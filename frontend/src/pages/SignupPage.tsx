@@ -106,11 +106,11 @@ export function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-brand-page flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="bg-gradient-to-br from-orange-500 to-amber-600 p-3 rounded-xl shadow-lg">
+            <div className="bg-brand-gradient p-3 rounded-xl shadow-lg">
               <ChefHat className="w-8 h-8 text-white" />
             </div>
           </div>
@@ -218,7 +218,7 @@ export function SignupPage() {
             <Separator className="mb-4" />
             <div className="text-center">
               <span className="text-sm text-muted-foreground">Already have an account? </span>
-              <Link to="/login" className="text-sm font-medium text-orange-600 hover:underline">
+              <Link to="/login" className="text-sm font-medium text-brand-text hover:underline">
                 Login here
               </Link>
             </div>

@@ -177,12 +177,12 @@ export function ShoppingCartDialog({ open, onOpenChange, recipeIds, onClose, onS
           </DialogHeader>
         </div>
         
-        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 scrollbar-thin scrollbar-thumb-orange-300 scrollbar-track-transparent hover:scrollbar-thumb-orange-400">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 scrollbar-thin scrollbar-thumb-brand scrollbar-track-transparent">
           <div className="space-y-4">
 
           {isLoading && (
             <div className="flex flex-col items-center justify-center py-12">
-              <Spinner className="w-8 h-8 text-orange-500 mb-4" />
+              <Spinner className="w-8 h-8 text-brand mb-4" />
               <p className="text-sm text-muted-foreground">Generating your shopping cart...</p>
             </div>
           )}

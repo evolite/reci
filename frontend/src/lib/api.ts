@@ -320,7 +320,18 @@ export async function getRecipes(): Promise<Recipe[]> {
 }
 
 export async function getRecipe(id: string): Promise<Recipe> {
-  return apiRequest<Recipe>(`/api/recipes/${id}`);
+  // Recipe endpoint is public but optionally accepts auth for user rating
+  // Use custom fetch to avoid redirecting on 401 (which shouldn't happen with optionalAuth)
+  const response = await fetch(`${API_BASE_URL}/api/recipes/${id}`, {
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorMessage = await extractErrorFromResponse(response, 'Failed to load recipe');
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
 }
 
 export async function searchRecipes(query: string): Promise<Recipe[]> {

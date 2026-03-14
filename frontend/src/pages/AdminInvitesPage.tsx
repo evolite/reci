@@ -151,7 +151,7 @@ export function AdminInvitesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen bg-brand-page">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <PageHeader
           title="Invite Management"

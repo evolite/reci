@@ -3,11 +3,20 @@ import { getVideoMetadata } from '../services/videoService';
 import { analyzeRecipe, analyzeRecipeWithVision, generateShoppingList } from '../services/openaiService';
 import { CreateRecipeInput, ShoppingListRequest } from '../models/Recipe';
 import { prisma } from '../lib/prisma';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate, optionalAuth, AuthRequest } from '../middleware/auth';
 import { analyzeAndUpdateRecipe, prepareUpdateData } from './recipeHelpers';
 import { validateVideoUrl } from '../utils/validation';
 import { handleRouteError, validateString, validateArray, filterNonEmptyStrings } from '../utils/errorHandler';
 import { calculateAverageRating, getUserRating, getRecipeRatingStats } from '../services/ratingService';
+import { serializeArray, deserializeArray } from '../lib/sqliteHelpers';
+
+function mapRecipe(recipe: any) {
+  return {
+    ...recipe,
+    ingredients: deserializeArray(recipe.ingredients as unknown as string),
+    tags: deserializeArray(recipe.tags as unknown as string),
+  };
+}
 
 const router = Router();
 
@@ -65,7 +74,7 @@ router.get('/public', async (req: Request, res: Response) => {
       recipes.map(async (recipe) => {
         const ratingData = await getRatingDataSafely(recipe.id);
         return {
-          ...recipe,
+          ...mapRecipe(recipe),
           averageRating: ratingData.averageRating,
           ratingCount: ratingData.ratingCount,
         };
@@ -75,6 +84,118 @@ router.get('/public', async (req: Request, res: Response) => {
     res.json(recipesWithRatings);
   } catch (error) {
     handleRouteError(error, res, 'fetching public recipes');
+  }
+});
+
+// GET /api/recipes/search?q=... - Search recipes (requires auth, must be before /:id)
+router.get('/search', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const query = typeof req.query.q === 'string' ? req.query.q : undefined;
+
+    if (!query || query.trim() === '') {
+      return res.status(400).json({ error: 'Search query is required' });
+    }
+
+    const searchTerm = query.trim().toLowerCase();
+
+    // Get all recipes and filter in memory to support case-insensitive ingredient search
+    const allRecipes = await prisma.recipe.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const filteredRecipes = allRecipes.filter((recipe) => {
+      const ingredients = deserializeArray(recipe.ingredients as unknown as string);
+      const tags = deserializeArray(recipe.tags as unknown as string);
+
+      const matchesText =
+        recipe.dishName.toLowerCase().includes(searchTerm) ||
+        recipe.cuisineType.toLowerCase().includes(searchTerm) ||
+        recipe.description.toLowerCase().includes(searchTerm);
+
+      const matchesIngredient = ingredients.some((ingredient) =>
+        ingredient.toLowerCase().includes(searchTerm)
+      );
+
+      const matchesTag = tags.some((tag: string) =>
+        tag.toLowerCase().includes(searchTerm)
+      );
+
+      return matchesText || matchesIngredient || matchesTag;
+    });
+
+    // Add rating data for each filtered recipe
+    const recipesWithRatings = await Promise.all(
+      filteredRecipes.map(async (recipe) => {
+        const ratingData = await getRatingDataSafely(recipe.id, req.userId);
+        return {
+          ...mapRecipe(recipe),
+          ...ratingData,
+        };
+      })
+    );
+
+    res.json(recipesWithRatings);
+  } catch (error) {
+    handleRouteError(error, res, 'searching recipes');
+  }
+});
+
+// GET /api/recipes/random - Get random recipe (requires auth, must be before /:id)
+router.get('/random', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const count = await prisma.recipe.count();
+
+    if (count === 0) {
+      return res.status(404).json({ error: 'No recipes found' });
+    }
+
+    const skip = Math.floor(Math.random() * count);
+    const recipe = await prisma.recipe.findFirst({
+      skip,
+    });
+
+    if (!recipe) {
+      return res.status(404).json({ error: 'Recipe not found' });
+    }
+
+    // Add rating data
+    const ratingData = await getRatingDataSafely(recipe.id, req.userId);
+
+    const recipeWithRatings = {
+      ...mapRecipe(recipe),
+      ...ratingData,
+    };
+
+    res.json(recipeWithRatings);
+  } catch (error) {
+    handleRouteError(error, res, 'fetching random recipe');
+  }
+});
+
+// GET /api/recipes/:id - Get single recipe (public, optional auth for user rating)
+// This must be last among GET routes to avoid matching /search, /random, etc.
+router.get('/:id', optionalAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const recipe = await prisma.recipe.findUnique({
+      where: { id },
+    });
+
+    if (!recipe) {
+      return res.status(404).json({ error: 'Recipe not found' });
+    }
+
+    // Add rating data (user rating only if authenticated)
+    const ratingData = await getRatingDataSafely(recipe.id, req.userId);
+
+    const recipeWithRatings = {
+      ...mapRecipe(recipe),
+      ...ratingData,
+    };
+
+    res.json(recipeWithRatings);
+  } catch (error) {
+    handleRouteError(error, res, 'fetching recipe');
   }
 });
 
@@ -153,14 +274,14 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         description: finalAnalysis.enhancedDescription || metadata.description,
         dishName: finalAnalysis.dishName,
         cuisineType: finalAnalysis.cuisineType,
-        ingredients: finalAnalysis.ingredients || [],
-        tags: finalAnalysis.suggestedTags || [],
+        ingredients: serializeArray(finalAnalysis.ingredients || []),
+        tags: serializeArray(finalAnalysis.suggestedTags || []),
         instructions: finalAnalysis.instructions || null,
         userId: req.userId || null,
       },
     });
 
-    res.status(201).json(recipe);
+    res.status(201).json(mapRecipe(recipe));
   } catch (error) {
     handleRouteError(error, res, 'creating recipe');
   }
@@ -178,7 +299,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       recipes.map(async (recipe) => {
         const ratingData = await getRatingDataSafely(recipe.id, req.userId);
         return {
-          ...recipe,
+          ...mapRecipe(recipe),
           ...ratingData,
         };
       })
@@ -190,113 +311,6 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// GET /api/recipes/search?q=... - Search recipes
-router.get('/search', async (req: AuthRequest, res: Response) => {
-  try {
-    const query = typeof req.query.q === 'string' ? req.query.q : undefined;
-
-    if (!query || query.trim() === '') {
-      return res.status(400).json({ error: 'Search query is required' });
-    }
-
-    const searchTerm = query.trim().toLowerCase();
-
-    // Get all recipes and filter in memory to support case-insensitive ingredient search
-    const allRecipes = await prisma.recipe.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
-
-    const filteredRecipes = allRecipes.filter((recipe) => {
-      const matchesText =
-        recipe.dishName.toLowerCase().includes(searchTerm) ||
-        recipe.cuisineType.toLowerCase().includes(searchTerm) ||
-        recipe.description.toLowerCase().includes(searchTerm);
-      
-      const matchesIngredient = recipe.ingredients.some((ingredient) =>
-        ingredient.toLowerCase().includes(searchTerm)
-      );
-
-      const matchesTag = (recipe.tags || []).some((tag: string) =>
-        tag.toLowerCase().includes(searchTerm)
-      );
-
-      return matchesText || matchesIngredient || matchesTag;
-    });
-
-    // Add rating data for each filtered recipe
-    const recipesWithRatings = await Promise.all(
-      filteredRecipes.map(async (recipe) => {
-        const ratingData = await getRatingDataSafely(recipe.id, req.userId);
-        return {
-          ...recipe,
-          ...ratingData,
-        };
-      })
-    );
-
-    res.json(recipesWithRatings);
-  } catch (error) {
-    handleRouteError(error, res, 'searching recipes');
-  }
-});
-
-// GET /api/recipes/random - Get random recipe
-router.get('/random', async (req: AuthRequest, res: Response) => {
-  try {
-    const count = await prisma.recipe.count();
-
-    if (count === 0) {
-      return res.status(404).json({ error: 'No recipes found' });
-    }
-
-    const skip = Math.floor(Math.random() * count);
-    const recipe = await prisma.recipe.findFirst({
-      skip,
-    });
-
-    if (!recipe) {
-      return res.status(404).json({ error: 'Recipe not found' });
-    }
-
-    // Add rating data
-    const ratingData = await getRatingDataSafely(recipe.id, req.userId);
-
-    const recipeWithRatings = {
-      ...recipe,
-      ...ratingData,
-    };
-
-    res.json(recipeWithRatings);
-  } catch (error) {
-    handleRouteError(error, res, 'fetching random recipe');
-  }
-});
-
-// GET /api/recipes/:id - Get single recipe
-router.get('/:id', async (req: AuthRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-    const recipe = await prisma.recipe.findUnique({
-      where: { id },
-    });
-
-    if (!recipe) {
-      return res.status(404).json({ error: 'Recipe not found' });
-    }
-
-    // Add rating data
-    const ratingData = await getRatingDataSafely(recipe.id, req.userId);
-
-    const recipeWithRatings = {
-      ...recipe,
-      ...ratingData,
-    };
-
-    res.json(recipeWithRatings);
-  } catch (error) {
-    handleRouteError(error, res, 'fetching recipe');
-  }
-});
 
 // PATCH /api/recipes/:id/tags - Update recipe tags
 router.patch('/:id/tags', async (req: AuthRequest, res: Response) => {
@@ -324,11 +338,11 @@ router.patch('/:id/tags', async (req: AuthRequest, res: Response) => {
     const recipe = await prisma.recipe.update({
       where: { id },
       data: {
-        tags: filterNonEmptyStrings(tags),
+        tags: serializeArray(filterNonEmptyStrings(tags)),
       },
     });
 
-    res.json(recipe);
+    res.json(mapRecipe(recipe));
   } catch (error) {
     handleRouteError(error, res, 'updating recipe tags');
   }
@@ -401,13 +415,13 @@ function mergeAnalysisResults(
     updateData.cuisineType = analysisResult.cuisineType;
   }
   if (providedFields.ingredients === undefined && analysisResult.ingredients) {
-    updateData.ingredients = analysisResult.ingredients;
+    updateData.ingredients = serializeArray(analysisResult.ingredients);
   }
   if (analysisResult.instructions) {
     updateData.instructions = analysisResult.instructions;
   }
   if (providedFields.tags === undefined && analysisResult.tags) {
-    updateData.tags = analysisResult.tags;
+    updateData.tags = serializeArray(analysisResult.tags);
   }
 }
 
@@ -416,7 +430,7 @@ function mergeAnalysisResults(
  */
 async function handleInstructionsAnalysis(
   prepared: { hasInstructions: boolean; instructionsValue: string | null },
-  existing: { instructions: string | null; description: string; tags: string[] },
+  existing: { instructions: string | null; description: string; tags: string | string[] },
   updateData: any,
   providedFields: { description?: any; dishName?: any; cuisineType?: any; ingredients?: any; tags?: any }
 ): Promise<void> {
@@ -429,11 +443,14 @@ async function handleInstructionsAnalysis(
 
   const existingInstructions = existing.instructions || '';
   const newInstructions = prepared.instructionsValue;
+  const existingTags = Array.isArray(existing.tags)
+    ? existing.tags
+    : deserializeArray(existing.tags as unknown as string);
 
   if (!existingInstructions && newInstructions.trim().length > 50) {
     const analysisResult = await analyzeAndUpdateRecipe(newInstructions, {
       description: existing.description,
-      tags: existing.tags || [],
+      tags: existingTags,
     });
     mergeAnalysisResults(analysisResult, updateData, providedFields);
   } else {
@@ -472,7 +489,15 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
     try {
       const prepared = prepareUpdateData({ description, dishName, cuisineType, ingredients, instructions, tags });
       updateData = prepared.updateData;
-      
+
+      // Serialize array fields for SQLite
+      if (updateData.ingredients !== undefined) {
+        updateData.ingredients = serializeArray(updateData.ingredients);
+      }
+      if (updateData.tags !== undefined) {
+        updateData.tags = serializeArray(updateData.tags);
+      }
+
       // Handle instructions analysis and update
       await handleInstructionsAnalysis(
         prepared,
@@ -496,7 +521,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
       data: updateData,
     });
 
-    res.json(recipe);
+    res.json(mapRecipe(recipe));
   } catch (error) {
     handleRouteError(error, res, 'updating recipe', 'Internal server error');
   }
@@ -538,7 +563,7 @@ router.post('/:id/rescrape', async (req: AuthRequest, res: Response) => {
     );
 
     // Merge suggested tags with existing tags (avoid duplicates)
-    const existingTags = existing.tags || [];
+    const existingTags = deserializeArray(existing.tags as unknown as string);
     const suggestedTags = analysis.suggestedTags || [];
     const mergedTags = [...new Set([...existingTags, ...suggestedTags])];
 
@@ -551,13 +576,13 @@ router.post('/:id/rescrape', async (req: AuthRequest, res: Response) => {
         description: analysis.enhancedDescription || metadata.description,
         dishName: analysis.dishName,
         cuisineType: analysis.cuisineType,
-        ingredients: analysis.ingredients || existing.ingredients,
-        tags: mergedTags,
+        ingredients: serializeArray(analysis.ingredients || deserializeArray(existing.ingredients as unknown as string)),
+        tags: serializeArray(mergedTags),
         instructions: analysis.instructions || existing.instructions,
       },
     });
 
-    res.json(recipe);
+    res.json(mapRecipe(recipe));
   } catch (error) {
     handleRouteError(error, res, 're-scraping recipe');
   }
@@ -628,9 +653,9 @@ router.post('/:id/rescrape-and-analyze', async (req: AuthRequest, res: Response)
     } : textAnalysis;
 
     // Merge suggested tags with existing tags (avoid duplicates)
-    const existingTags = existing.tags || [];
-    const suggestedTags = finalAnalysis.suggestedTags || [];
-    const mergedTags = [...new Set([...existingTags, ...suggestedTags])];
+    const existingTags2 = deserializeArray(existing.tags as unknown as string);
+    const suggestedTags2 = finalAnalysis.suggestedTags || [];
+    const mergedTags2 = [...new Set([...existingTags2, ...suggestedTags2])];
 
     // Update recipe with new data (using OpenAI-enhanced fields)
     const recipe = await prisma.recipe.update({
@@ -641,13 +666,13 @@ router.post('/:id/rescrape-and-analyze', async (req: AuthRequest, res: Response)
         description: finalAnalysis.enhancedDescription || metadata.description,
         dishName: finalAnalysis.dishName,
         cuisineType: finalAnalysis.cuisineType,
-        ingredients: finalAnalysis.ingredients || existing.ingredients,
-        tags: mergedTags,
+        ingredients: serializeArray(finalAnalysis.ingredients || deserializeArray(existing.ingredients as unknown as string)),
+        tags: serializeArray(mergedTags2),
         instructions: finalAnalysis.instructions || existing.instructions,
       },
     });
 
-    res.json(recipe);
+    res.json(mapRecipe(recipe));
   } catch (error) {
     handleRouteError(error, res, 're-scraping and analyzing recipe');
   }
@@ -680,9 +705,9 @@ router.post('/:id/analyze-vision', async (req: AuthRequest, res: Response) => {
     );
 
     // Merge suggested tags with existing tags
-    const existingTags = existing.tags || [];
-    const suggestedTags = analysis.suggestedTags || [];
-    const mergedTags = [...new Set([...existingTags, ...suggestedTags])];
+    const existingTagsVision = deserializeArray(existing.tags as unknown as string);
+    const suggestedTagsVision = analysis.suggestedTags || [];
+    const mergedTagsVision = [...new Set([...existingTagsVision, ...suggestedTagsVision])];
 
     // Update recipe with vision analysis
     const recipe = await prisma.recipe.update({
@@ -691,13 +716,13 @@ router.post('/:id/analyze-vision', async (req: AuthRequest, res: Response) => {
         description: analysis.enhancedDescription || existing.description,
         dishName: analysis.dishName,
         cuisineType: analysis.cuisineType,
-        ingredients: analysis.ingredients || existing.ingredients,
+        ingredients: serializeArray(analysis.ingredients || deserializeArray(existing.ingredients as unknown as string)),
         instructions: analysis.instructions || existing.instructions,
-        tags: mergedTags,
+        tags: serializeArray(mergedTagsVision),
       },
     });
 
-    res.json(recipe);
+    res.json(mapRecipe(recipe));
   } catch (error) {
     handleRouteError(error, res, 'analyzing recipe with vision');
   }
@@ -761,7 +786,7 @@ router.post('/shopping-list', async (req: AuthRequest, res: Response) => {
     const recipesForShoppingList = recipes.map(recipe => ({
       id: recipe.id,
       dishName: recipe.dishName,
-      ingredients: recipe.ingredients || [],
+      ingredients: deserializeArray(recipe.ingredients as unknown as string),
     }));
 
     // Generate shopping list using OpenAI

@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -58,8 +58,8 @@ model Recipe {
   description     String   @default("")
   dishName        String
   cuisineType     String
-  ingredients     String[] @default([]) // Full ingredients list with amounts (e.g., "2 dl milk", "500 g flour")
-  tags            String[] @default([]) // User-added tags
+  ingredients     String @default("[]") // Full ingredients list with amounts (e.g., "2 dl milk", "500 g flour") — JSON array stored as text
+  tags            String @default("[]") // User-added tags — JSON array stored as text
   instructions    String?  // Recipe instructions/steps (without ingredients)
   userId          String?
   createdAt       DateTime @default(now())
@@ -86,9 +86,9 @@ model Waitlist {
 model ShoppingCart {
   id            String   @id @default(uuid())
   userId        String   @unique
-  recipeIds     String[] @default([])
+  recipeIds     String @default("[]") // JSON array stored as text
   shoppingList  Json     // ShoppingListResponse structure
-  checkedItems  String[] @default([])
+  checkedItems  String @default("[]") // JSON array stored as text
   shareToken    String?  @unique // UUID for sharing
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

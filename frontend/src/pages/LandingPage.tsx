@@ -29,9 +29,10 @@ function RecipeCard({ recipe }: RecipeCardProps) {
     >
       <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0">
         <img
-          src={recipe.thumbnailUrl}
+          src={recipe.thumbnailUrl || '/recipe-placeholder.svg'}
           alt={recipe.dishName}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+          onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/recipe-placeholder.svg'; }}
         />
       </div>
       <CardContent className="p-4 flex-1 flex flex-col">
@@ -42,7 +43,7 @@ function RecipeCard({ recipe }: RecipeCardProps) {
           {recipe.description}
         </p>
         <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+          <Badge variant="secondary" className="text-xs bg-brand-light text-brand-fg dark:bg-brand-dark dark:text-brand-on-dark">
             {recipe.cuisineType}
           </Badge>
         </div>
@@ -57,7 +58,7 @@ function RecipeCard({ recipe }: RecipeCardProps) {
                 <Badge
                   key={tag}
                   variant="outline"
-                  className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-700"
+                  className="text-xs bg-tag text-tag-text dark:bg-tag-dark dark:text-tag-text-dark border-tag-border dark:border-tag-text"
                 >
                   {tag}
                 </Badge>
@@ -151,11 +152,11 @@ export function LandingPage() {
   // If user has invite token, show registration link
   if (hasInviteToken) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-brand-page flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center space-y-4">
             <div className="flex justify-center mb-4">
-              <div className="bg-gradient-to-br from-orange-500 to-amber-600 p-3 rounded-xl shadow-lg">
+              <div className="bg-brand-gradient p-3 rounded-xl shadow-lg">
                 <ChefHat className="w-8 h-8 text-white" />
               </div>
             </div>
@@ -164,7 +165,7 @@ export function LandingPage() {
               Click below to create your account and get started with Reci.
             </p>
             <Link to={`/register?token=${hasInviteToken}`}>
-              <Button className="w-full bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700">
+              <Button className="w-full bg-brand-gradient-r">
                 Create Account <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </Link>
@@ -180,17 +181,17 @@ export function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen bg-brand-page">
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="container mx-auto px-4 py-8 sm:py-12">
           <div className="text-center max-w-4xl mx-auto">
             <div className="flex justify-center mb-6">
-              <div className="bg-gradient-to-br from-orange-500 to-amber-600 p-4 rounded-2xl shadow-2xl">
+              <div className="bg-brand-gradient p-4 rounded-2xl shadow-2xl">
                 <ChefHat className="w-16 h-16 text-white" />
               </div>
             </div>
-            <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-orange-600 via-amber-600 to-orange-600 bg-clip-text text-transparent">
+            <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6 text-brand-gradient">
               Reci
             </h1>
             <p className="text-xl sm:text-2xl md:text-3xl font-semibold mb-4 text-gray-800 dark:text-gray-200">
@@ -209,7 +210,7 @@ export function LandingPage() {
                 target="_blank" 
                 rel="noopener noreferrer"
               >
-                <Button size="lg" className="w-full sm:w-auto bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700">
+                <Button size="lg" className="w-full sm:w-auto bg-brand-gradient-r">
                   <Github className="w-4 h-4 mr-2" />
                   View on GitHub
                 </Button>
@@ -223,8 +224,8 @@ export function LandingPage() {
 
             {/* Features */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto mb-12">
-              <Card className="text-center p-4 border-2 border-orange-200 dark:border-orange-800">
-                <div className="bg-gradient-to-br from-orange-500 to-amber-600 w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3">
+              <Card className="text-center p-4 border-2 border-brand-border dark:border-brand-dark">
+                <div className="bg-brand-gradient w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3">
                   <Plus className="w-5 h-5 text-white" />
                 </div>
                 <h3 className="text-sm font-semibold mb-1">Quick Add</h3>
@@ -232,8 +233,8 @@ export function LandingPage() {
                   Paste recipe URLs
                 </p>
               </Card>
-              <Card className="text-center p-4 border-2 border-orange-200 dark:border-orange-800">
-                <div className="bg-gradient-to-br from-orange-500 to-amber-600 w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3">
+              <Card className="text-center p-4 border-2 border-brand-border dark:border-brand-dark">
+                <div className="bg-brand-gradient w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3">
                   <Search className="w-5 h-5 text-white" />
                 </div>
                 <h3 className="text-sm font-semibold mb-1">Smart Search</h3>
@@ -241,8 +242,8 @@ export function LandingPage() {
                   Find by ingredients
                 </p>
               </Card>
-              <Card className="text-center p-4 border-2 border-orange-200 dark:border-orange-800">
-                <div className="bg-gradient-to-br from-orange-500 to-amber-600 w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3">
+              <Card className="text-center p-4 border-2 border-brand-border dark:border-brand-dark">
+                <div className="bg-brand-gradient w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3">
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>
                 <h3 className="text-sm font-semibold mb-1">AI-Powered</h3>
@@ -257,7 +258,7 @@ export function LandingPage() {
 
       {/* Horizontal Scrolling Recipe Feed - Full Width */}
       {!loading && recipes.length > 0 && (
-        <section className="w-full py-12 bg-gradient-to-r from-orange-500 to-amber-600">
+        <section className="w-full py-12 bg-brand-gradient-r">
           <div className="container mx-auto px-4">
             <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 text-white">
               Save Your Favorites, Discover Them Later
@@ -296,7 +297,7 @@ export function LandingPage() {
               href={GITHUB_URL} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex items-center gap-2 hover:text-orange-600 transition-colors"
+              className="flex items-center gap-2 hover:text-brand-text transition-colors"
             >
               <Github className="w-4 h-4" />
               <span>View on GitHub</span>

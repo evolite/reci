@@ -106,9 +106,9 @@ function RatedDice({
       type={isClickable ? 'button' : undefined}
       onClick={onClick}
       className={cn(
-        'flex items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-lg',
+        'flex items-center justify-center rounded-lg bg-brand-gradient text-white shadow-lg',
         getSizeClasses(size),
-        isClickable && 'cursor-pointer hover:from-orange-600 hover:to-amber-700 hover:shadow-xl transition-all duration-200 hover:scale-110 active:scale-105',
+        isClickable && 'cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-110 active:scale-105',
         className
       )}
       title={title}

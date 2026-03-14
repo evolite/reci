@@ -113,7 +113,7 @@ export function ShoppingCartDialog({ open, onOpenChange, recipeIds, onClose, onS
 
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-12">
-            <Spinner className="w-8 h-8 text-orange-500 mb-4" />
+            <Spinner className="w-8 h-8 text-brand mb-4" />
             <p className="text-sm text-muted-foreground">Generating your shopping cart...</p>
           </div>
         )}

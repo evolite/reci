@@ -24,6 +24,29 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
+
+    /* Brand (orange/amber) */
+    --brand:                21 90% 57%;
+    --brand-hover:          17 88% 50%;
+    --brand-light:          34 100% 91%;
+    --brand-subtle:         33 100% 96%;
+    --brand-text:           17 88% 50%;
+    --brand-dark:           15 75% 28%;
+    --brand-border:         27 96% 70%;
+    --brand-border-strong:  24 95% 64%;
+    --brand-fg:             15 79% 34%;
+    --brand-on-dark:        31 97% 82%;
+    --brand-grad-mid:       32 95% 44%;
+    --brand-grad-mid-hover: 26 90% 37%;
+    --brand-page-mid:       48 96% 89%;
+    --brand-page-end:       55 92% 95%;
+
+    /* Tag (blue) */
+    --tag:           214 100% 97%;
+    --tag-border:    213 97% 87%;
+    --tag-text:      221 83% 53%;
+    --tag-dark:      224 71% 26%;
+    --tag-text-dark: 213 97% 87%;
   }
 
   .dark {
@@ -46,6 +69,12 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+
+    --brand-subtle: 15 75% 28%;
+    --brand-border: 15 75% 28%;
+    --tag:          224 71% 26%;
+    --tag-border:   221 83% 53%;
+    --tag-text:     213 97% 87%;
   }
 }
 
@@ -56,41 +85,62 @@
   body {
     @apply bg-background text-foreground;
   }
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
 }
 
 @layer utilities {
+  /* Page background */
+  .bg-brand-page { background: linear-gradient(to bottom right, hsl(var(--brand-subtle)), hsl(var(--brand-page-mid)), hsl(var(--brand-page-end))); }
+  .dark .bg-brand-page { background: linear-gradient(to bottom right, hsl(222.2 84% 4.9%), hsl(217.2 32.6% 17.5%), hsl(222.2 84% 4.9%)); }
+
+  /* Icon / element fill gradients */
+  .bg-brand-gradient { background: linear-gradient(to bottom right, hsl(var(--brand)), hsl(var(--brand-grad-mid))); }
+  .bg-brand-gradient:hover { background: linear-gradient(to bottom right, hsl(var(--brand-hover)), hsl(var(--brand-grad-mid-hover))); }
+
+  /* Button/CTA gradient */
+  .bg-brand-gradient-r { background: linear-gradient(to right, hsl(var(--brand)), hsl(var(--brand-grad-mid))); }
+  .bg-brand-gradient-r:hover { background: linear-gradient(to right, hsl(var(--brand-hover)), hsl(var(--brand-grad-mid-hover))); }
+
+  /* Heading text gradients */
+  .text-brand-gradient { background: linear-gradient(to right, hsl(var(--brand-text)), hsl(var(--brand-grad-mid)), hsl(var(--brand-text))); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .text-brand-gradient-short { background: linear-gradient(to right, hsl(var(--brand-text)), hsl(var(--brand-grad-mid))); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  /* Selected card */
+  .bg-brand-selected { background-color: hsl(var(--brand-subtle) / 0.5); }
+  .dark .bg-brand-selected { background-color: hsl(var(--brand-dark) / 0.2); }
+
+  /* Scrollbar */
+  .scrollbar-thumb-brand::-webkit-scrollbar-thumb { background-color: hsl(var(--brand-border)); border-radius: 0.5rem; }
+  .scrollbar-thumb-brand:hover::-webkit-scrollbar-thumb { background-color: hsl(var(--brand-border-strong)); }
+
   .scrollbar-thin {
     scrollbar-width: thin;
   }
-  
-  .scrollbar-thumb-orange-300::-webkit-scrollbar-thumb {
-    background-color: rgb(253 186 116);
-    border-radius: 0.5rem;
-  }
-  
-  .scrollbar-thumb-orange-400::-webkit-scrollbar-thumb {
-    background-color: rgb(251 146 60);
-    border-radius: 0.5rem;
-  }
-  
+
   .scrollbar-track-transparent::-webkit-scrollbar-track {
     background: transparent;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar {
     width: 8px;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: rgb(253 186 116);
+    background-color: hsl(var(--brand-border));
     border-radius: 0.5rem;
   }
-  
+
   .scrollbar-thin:hover::-webkit-scrollbar-thumb {
-    background-color: rgb(251 146 60);
+    background-color: hsl(var(--brand-border-strong));
   }
 }

@@ -47,7 +47,7 @@ export function ShoppingListContent({
               return (
                 <Card key={section.name}>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg text-orange-600 dark:text-orange-400">
+                    <CardTitle className="text-lg text-brand-text">
                       {section.name}
                     </CardTitle>
                   </CardHeader>
@@ -77,7 +77,7 @@ export function ShoppingListContent({
             } else {
               return (
                 <div key={section.name} className="border rounded-lg p-4">
-                  <h3 className="font-semibold text-lg mb-3 text-orange-600 dark:text-orange-400">
+                  <h3 className="font-semibold text-lg mb-3 text-brand-text">
                     {section.name}
                   </h3>
                   <ul className="space-y-2">

@@ -228,20 +228,21 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
       <Card 
         className={(() => {
           if (isEditing) {
-            return 'transition-all duration-300 hover:scale-[1.02] border-2 overflow-hidden group border-orange-400 cursor-default';
+            return 'transition-all duration-300 hover:scale-[1.02] border-2 overflow-hidden group border-brand-border-strong cursor-default';
           }
           if (isSelected) {
-            return 'transition-all duration-300 hover:scale-[1.02] border-2 overflow-hidden group border-orange-500 cursor-pointer hover:shadow-xl bg-orange-50/50 dark:bg-orange-900/20';
+            return 'transition-all duration-300 hover:scale-[1.02] border-2 overflow-hidden group border-brand cursor-pointer hover:shadow-xl bg-brand-selected';
           }
-          return 'transition-all duration-300 hover:scale-[1.02] border-2 overflow-hidden group cursor-pointer hover:shadow-xl hover:border-orange-300';
+          return 'transition-all duration-300 hover:scale-[1.02] border-2 overflow-hidden group cursor-pointer hover:shadow-xl hover:border-brand-border';
         })()}
         onClick={handleCardClick}
       >
         <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800 relative">
           <img
-            src={recipe.thumbnailUrl}
+            src={recipe.thumbnailUrl || '/recipe-placeholder.svg'}
             alt={recipe.dishName}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/recipe-placeholder.svg'; }}
           />
           {!isEditing && (
             <>
@@ -267,7 +268,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
                       handleDeselect();
                     }
                   }}
-                  className="h-6 w-6 border-2 border-gray-300 dark:border-gray-600 data-[state=checked]:bg-orange-500/80 data-[state=checked]:border-orange-500/80 data-[state=checked]:text-white"
+                  className="h-6 w-6 border-2 border-gray-300 dark:border-gray-600 data-[state=checked]:bg-brand/80 data-[state=checked]:border-brand/80 data-[state=checked]:text-white"
                   aria-label={isSelected ? 'Deselect recipe' : 'Select recipe'}
                 />
               </button>
@@ -330,7 +331,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
             </>
           )}
         </div>
-        <CardHeader className="p-3 sm:p-4 sm:p-6">
+        <CardHeader className="p-3 sm:p-6">
           {isEditing ? (
             <div className="space-y-2">
               <Input
@@ -345,7 +346,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
           ) : (
             <>
               <div className="flex items-start justify-between gap-2 mb-1 sm:mb-2">
-                <CardTitle className="line-clamp-2 text-base sm:text-lg sm:text-xl group-hover:text-orange-600 transition-colors flex-1">
+                <CardTitle className="line-clamp-2 text-base sm:text-lg sm:text-xl group-hover:text-brand-text transition-colors flex-1">
                   {recipe.dishName}
                 </CardTitle>
               </div>
@@ -357,7 +358,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
             </>
           )}
         </CardHeader>
-        <CardContent className="p-3 sm:p-4 sm:p-6 pt-0 space-y-3">
+        <CardContent className="p-3 sm:p-6 pt-0 space-y-3">
           {isEditing ? (
             <div className="space-y-3">
               <div>
@@ -411,7 +412,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
                     <Badge
                       key={tag}
                       variant="outline"
-                      className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-700"
+                      className="text-xs bg-tag text-tag-text dark:bg-tag-dark dark:text-tag-text-dark border-tag-border dark:border-tag-text"
                     >
                       {tag}
                       <Button
@@ -452,7 +453,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
                     <Button
                       type="submit"
                       size="sm"
-                      className="px-2 py-1 text-xs bg-orange-500 hover:bg-orange-600"
+                      className="px-2 py-1 text-xs bg-brand hover:bg-brand-hover"
                     >
                       Add
                     </Button>
@@ -467,7 +468,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
                   <Button 
                     onClick={handleSave} 
                     size="sm" 
-                    className="flex-1 bg-orange-500 hover:bg-orange-600"
+                    className="flex-1 bg-brand hover:bg-brand-hover"
                     disabled={isSaving}
                   >
                     {isSaving ? (
@@ -498,7 +499,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
           ) : (
             <>
               <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-2">
-                <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                <Badge variant="secondary" className="text-xs bg-brand-light text-brand-fg dark:bg-brand-dark dark:text-brand-on-dark">
                   {recipe.cuisineType}
                 </Badge>
               </div>
@@ -515,7 +516,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
                       <Badge
                         key={tag}
                         variant="outline"
-                        className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-700"
+                        className="text-xs bg-tag text-tag-text dark:bg-tag-dark dark:text-tag-text-dark border-tag-border dark:border-tag-text"
                       >
                         {tag}
                       </Badge>

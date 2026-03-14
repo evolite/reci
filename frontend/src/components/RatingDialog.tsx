@@ -68,10 +68,10 @@ export function RatingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="p-6">
         <DialogHeader>
-          <DialogTitle>Rate Recipe</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-2xl">Rate Recipe</DialogTitle>
+          <DialogDescription className="text-base mt-2">
             How would you rate "{recipeName}"? Select a dice value from 1 to 6.
           </DialogDescription>
         </DialogHeader>
@@ -87,7 +87,7 @@ export function RatingDialog({
                 className={cn(
                   'transition-all duration-200',
                   selectedRating === rating
-                    ? 'scale-110 ring-4 ring-orange-500 ring-offset-2 rounded-lg'
+                    ? 'scale-110 ring-4 ring-brand ring-offset-2 shadow-lg'
                     : 'hover:scale-105 opacity-70 hover:opacity-100',
                   isSubmitting && 'opacity-50 cursor-not-allowed'
                 )}
@@ -101,20 +101,15 @@ export function RatingDialog({
           {error && (
             <p className="mt-4 text-sm text-destructive text-center">{error}</p>
           )}
-
-          {currentRating && (
-            <p className="mt-4 text-sm text-muted-foreground text-center">
-              Your current rating: <Dice value={currentRating} size="sm" className="inline-flex mx-1" />
-            </p>
-          )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="mt-6 pt-4 border-t border-border">
           <Button
             type="button"
             variant="outline"
             onClick={handleCancel}
             disabled={isSubmitting}
+            className="border-2"
           >
             Cancel
           </Button>
@@ -122,7 +117,7 @@ export function RatingDialog({
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting || selectedRating === null}
-            className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700"
+            className="bg-brand-gradient-r border-2 border-brand-text"
           >
             {isSubmitting ? (
               <>

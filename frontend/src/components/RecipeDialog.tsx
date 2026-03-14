@@ -12,7 +12,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import type { Recipe } from '@/lib/api';
-import { ExternalLink, Save } from 'lucide-react';
+import { ExternalLink, Save, Share2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { updateRecipe, rateRecipe, getRecipe } from '@/lib/api';
@@ -35,6 +35,7 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [showRatingDialog, setShowRatingDialog] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const queryClient = useQueryClient();
 
   // Update currentRecipe when recipe prop changes
@@ -52,6 +53,22 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
   }, [open]);
 
   if (!currentRecipe) return null;
+
+  const handleCopyLink = async () => {
+    if (!currentRecipe) return;
+    
+    const shareUrl = `${globalThis.location.origin}/recipe/${currentRecipe.id}`;
+    
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+      setErrorMessage('Failed to copy link to clipboard');
+      setShowErrorDialog(true);
+    }
+  };
 
   const handleSavePastedRecipe = async () => {
     if (!pastedRecipeText.trim() || pastedRecipeText.trim().length < 50) {
@@ -112,14 +129,31 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
             </div>
           </DialogHeader>
           
-          {/* View Source Button at Top */}
-          <div className="mt-4">
+          {/* Action Buttons at Top */}
+          <div className="mt-4 flex gap-2">
             <Button
               onClick={() => window.open(currentRecipe.videoUrl, '_blank')}
-              className="w-full bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700"
+              className="flex-1 bg-brand-gradient-r"
             >
               <ExternalLink className="w-4 h-4 mr-2" />
               View Source
+            </Button>
+            <Button
+              onClick={handleCopyLink}
+              variant="outline"
+              className="border-2"
+            >
+              {linkCopied ? (
+                <>
+                  <Check className="w-4 h-4 mr-2 text-green-600" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-4 h-4 mr-2" />
+                  Copy Link
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -161,7 +195,7 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
               <ul className="list-none space-y-1 text-sm">
                 {currentRecipe.ingredients.map((ingredient) => (
                   <li key={ingredient} className="flex items-start">
-                    <span className="mr-2 text-orange-600">•</span>
+                    <span className="mr-2 text-brand-text">•</span>
                     <span>{ingredient}</span>
                   </li>
                 ))}
@@ -186,7 +220,7 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
                       const cleanStep = step.replace(/^\d+[.)]\s*/, '').trim();
                       return (
                         <li key={cleanStep} className="flex items-start">
-                          <span className="mr-3 text-orange-600 font-semibold min-w-[24px]">{index + 1}.</span>
+                          <span className="mr-3 text-brand-text font-semibold min-w-[24px]">{index + 1}.</span>
                           <span className="flex-1">{cleanStep}</span>
                         </li>
                       );
@@ -216,7 +250,7 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
                       const cleanStep = step.replace(/^\d+[.)]\s*/, '').trim();
                       return (
                         <li key={cleanStep} className="flex items-start">
-                          <span className="mr-3 text-orange-600 font-semibold min-w-[24px]">{index + 1}.</span>
+                          <span className="mr-3 text-brand-text font-semibold min-w-[24px]">{index + 1}.</span>
                           <span className="flex-1">{cleanStep}</span>
                         </li>
                       );
@@ -230,7 +264,7 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
                     const cleanStep = step.replace(/^\d+[.)]\s*/, '').trim();
                     return (
                       <li key={cleanStep} className="flex items-start">
-                        <span className="mr-3 text-orange-600 font-semibold min-w-[24px]">{index + 1}.</span>
+                        <span className="mr-3 text-brand-text font-semibold min-w-[24px]">{index + 1}.</span>
                         <span className="flex-1">{cleanStep}</span>
                       </li>
                     );
@@ -256,7 +290,7 @@ export function RecipeDialog({ recipe, open, onOpenChange }: RecipeDialogProps) 
               />
               <Button
                 onClick={handleSavePastedRecipe}
-                className="w-full bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700"
+                className="w-full bg-brand-gradient-r"
                 disabled={isSaving || !pastedRecipeText.trim() || pastedRecipeText.trim().length < 50}
               >
                 {isSaving ? (
