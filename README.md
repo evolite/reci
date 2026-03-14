@@ -40,7 +40,7 @@ Built with TypeScript, React, and Vite. Uses shadcn/ui components for the UI, Pr
 
 ### Prerequisites
 
-- Docker or Podman
+- Podman (or Docker)
 - An API key for your chosen AI provider (OpenAI, Anthropic, Google, or a self-hosted model)
 
 ### Environment Variables
@@ -69,10 +69,10 @@ The AI provider, model, and API key can be configured directly in the admin pane
 
 The `OPENAI_API_KEY` environment variable is used as a fallback if no API key has been saved in the database, preserving backward compatibility for existing deployments.
 
-### Run with Docker
+### Run with Podman
 
 ```bash
-docker run -d \
+podman run -d \
   -p 4000:4000 \
   -v reci-data:/data \
   -e JWT_SECRET="your-secret" \
@@ -88,8 +88,8 @@ docker run -d \
 ```bash
 git clone https://github.com/evolite/reci.git
 cd reci
-docker build -t reci:latest .
-docker run -d -p 4000:4000 -v reci-data:/data \
+podman build -t reci:latest .
+podman run -d -p 4000:4000 -v reci-data:/data \
   -e JWT_SECRET="your-secret" \
   reci:latest
 ```
