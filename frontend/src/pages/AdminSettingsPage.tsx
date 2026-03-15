@@ -1,24 +1,14 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { PageHeader } from '@/components/PageHeader';
-import { Spinner } from '@/components/ui/spinner';
-import { ArrowLeft, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { AI_PROVIDERS, PROVIDER_MODELS } from '@/lib/constants';
 import { useSettings } from '@/hooks/useSettings';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { AIProviderConfigForm } from '@/components/AIProviderConfigForm';
 
 export function AdminSettingsPage() {
   const { user } = useAuth();
@@ -48,10 +38,6 @@ export function AdminSettingsPage() {
   if (loading) {
     return <LoadingScreen />;
   }
-
-  const isCustomProvider = provider === 'custom';
-  const providerModels = PROVIDER_MODELS[provider] ?? [];
-  const isKnownProvider = !isCustomProvider && providerModels.length > 0;
 
   return (
     <div className="min-h-screen bg-brand-page">
@@ -95,100 +81,18 @@ export function AdminSettingsPage() {
               Configure the AI provider and model used for recipe analysis. Changes take effect immediately without rebuilding.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="ai-provider">Provider</Label>
-              <Select value={provider} onValueChange={setProvider}>
-                <SelectTrigger id="ai-provider">
-                  <SelectValue placeholder="Select a provider" />
-                </SelectTrigger>
-                <SelectContent>
-                  {AI_PROVIDERS.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>
-                      {p.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="ai-api-key">API Key</Label>
-              <Input
-                id="ai-api-key"
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Leave empty to use OPENAI_API_KEY environment variable"
-              />
-              <p className="text-xs text-muted-foreground">
-                Falls back to <code>OPENAI_API_KEY</code> env var if empty.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="ai-base-url">Base URL</Label>
-              <Input
-                id="ai-base-url"
-                type="text"
-                value={baseUrl}
-                onChange={(e) => setBaseUrl(e.target.value)}
-                placeholder="https://api.openai.com/v1"
-                readOnly={!isCustomProvider}
-                className={isCustomProvider ? '' : 'opacity-60 cursor-not-allowed'}
-              />
-              {!isCustomProvider && (
-                <p className="text-xs text-muted-foreground">
-                  Auto-configured for the selected provider.
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="ai-model">Model</Label>
-              {isKnownProvider ? (
-                <Select value={model} onValueChange={setModel}>
-                  <SelectTrigger id="ai-model">
-                    <SelectValue placeholder="Select a model" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {providerModels.map((m) => (
-                      <SelectItem key={m.value} value={m.value}>
-                        {m.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input
-                  id="ai-model"
-                  type="text"
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  placeholder="e.g. llama3, mistral, gpt-4o"
-                />
-              )}
-              <p className="text-xs text-muted-foreground">
-                Current model: <strong>{model}</strong>
-              </p>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? (
-                  <>
-                    <Spinner className="w-4 h-4 mr-2" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Settings
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardContent>
+          <AIProviderConfigForm
+            provider={provider}
+            setProvider={setProvider}
+            model={model}
+            setModel={setModel}
+            apiKey={apiKey}
+            setApiKey={setApiKey}
+            baseUrl={baseUrl}
+            setBaseUrl={setBaseUrl}
+            saving={saving}
+            onSave={handleSave}
+          />
         </Card>
       </div>
     </div>
