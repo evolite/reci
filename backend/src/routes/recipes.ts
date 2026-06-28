@@ -226,14 +226,15 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       return res.status(409).json({ error: 'Recipe already exists', recipe: existing });
     }
 
-    // Fetch video metadata (including comments)
+    // Fetch video metadata (including comments and transcript)
     const metadata = await getVideoMetadata(videoUrl);
 
-    // Analyze with OpenAI text analysis (including comments for better context)
+    // Analyze with OpenAI text analysis (including comments and transcript for better context)
     const textAnalysis = await analyzeRecipe(
-      metadata.title, 
+      metadata.title,
       metadata.description,
-      metadata.topComments
+      metadata.topComments,
+      metadata.transcript
     );
 
     // Analyze with GPT-Vision using the thumbnail
@@ -552,14 +553,15 @@ router.post('/:id/rescrape', async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: validation.error || 'Invalid URL' });
     }
 
-    // Fetch metadata (including comments)
+    // Fetch metadata (including comments and transcript)
     const metadata = await getVideoMetadata(existing.videoUrl);
 
-    // Analyze with OpenAI (including comments for better context)
+    // Analyze with OpenAI (including comments and transcript for better context)
     const analysis = await analyzeRecipe(
-      metadata.title, 
+      metadata.title,
       metadata.description,
-      metadata.topComments
+      metadata.topComments,
+      metadata.transcript
     );
 
     // Merge suggested tags with existing tags (avoid duplicates)
@@ -613,14 +615,15 @@ router.post('/:id/rescrape-and-analyze', async (req: AuthRequest, res: Response)
       return res.status(400).json({ error: validation.error || 'Invalid URL' });
     }
 
-    // Fetch metadata (including comments)
+    // Fetch metadata (including comments and transcript)
     const metadata = await getVideoMetadata(existing.videoUrl);
 
-    // Analyze with OpenAI text analysis (including comments for better context)
+    // Analyze with OpenAI text analysis (including comments and transcript for better context)
     const textAnalysis = await analyzeRecipe(
-      metadata.title, 
+      metadata.title,
       metadata.description,
-      metadata.topComments
+      metadata.topComments,
+      metadata.transcript
     );
 
     // Analyze with GPT-Vision using the thumbnail

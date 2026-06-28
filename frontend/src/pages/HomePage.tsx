@@ -95,21 +95,21 @@ export function HomePage() {
       <div className="container mx-auto px-4 py-4 sm:py-6 md:py-8 max-w-7xl">
         {/* Header with Branding */}
         <header className="mb-6 sm:mb-8">
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <div className="bg-brand-gradient p-2.5 sm:p-3 rounded-xl shadow-lg">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="bg-brand-gradient p-2.5 sm:p-3 rounded-2xl shadow-lg shrink-0">
                 <ChefHat className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
               </div>
-              <div>
-                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-brand-gradient-short">
+              <div className="min-w-0">
+                <h1 className="text-3xl sm:text-4xl font-extrabold text-brand-gradient-short leading-none">
                   Reci
                 </h1>
-                <p className="text-xs sm:text-sm text-muted-foreground -mt-1">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 truncate">
                   Discover and organize your favorite recipes
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               {user && (
                 <>
                   <ShoppingCartDropdown
@@ -119,7 +119,7 @@ export function HomePage() {
                     }}
                   />
                   <div className="text-right hidden sm:block">
-                    <p className="text-sm font-medium">{user.name || user.email}</p>
+                    <p className="text-sm font-semibold leading-tight">{user.name || user.email}</p>
                     {user.isAdmin && (
                       <p className="text-xs text-muted-foreground">Admin</p>
                     )}
@@ -129,9 +129,10 @@ export function HomePage() {
                       variant="outline"
                       size="sm"
                       onClick={() => navigate('/admin/settings')}
+                      className="hidden sm:flex"
                     >
-                      <Shield className="w-4 h-4 mr-2" />
-                      Admin
+                      <Shield className="w-4 h-4 sm:mr-1.5" />
+                      <span className="hidden sm:inline">Admin</span>
                     </Button>
                   )}
                   <Button
@@ -139,8 +140,8 @@ export function HomePage() {
                     size="sm"
                     onClick={handleLogout}
                   >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Logout
+                    <LogOut className="w-4 h-4 sm:mr-1.5" />
+                    <span className="hidden sm:inline">Logout</span>
                   </Button>
                 </>
               )}
@@ -149,23 +150,23 @@ export function HomePage() {
         </header>
 
         {/* Add Recipe Form */}
-        <div className="mb-4 sm:mb-6">
+        <div className="mb-5 sm:mb-6">
           <AddRecipeForm />
         </div>
 
         {/* Actions Bar */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-8">
           <div className="flex-1">
             <SearchBar value={searchQuery} onChange={setSearchQuery} />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 shrink-0">
             {selectedRecipes.size > 0 && (
               <Button
                 onClick={handleCreateShoppingCart}
-                className="bg-brand hover:bg-brand-hover"
+                className="bg-brand-gradient-r text-white shadow-sm hover:shadow-md transition-shadow"
               >
                 <ShoppingCart className="w-4 h-4 mr-2" />
-                Create Shopping Cart ({selectedRecipes.size})
+                Shopping List ({selectedRecipes.size})
               </Button>
             )}
             <RandomButton />

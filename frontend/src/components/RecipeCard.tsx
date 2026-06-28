@@ -225,15 +225,15 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
 
   return (
     <>
-      <Card 
+      <Card
         className={(() => {
           if (isEditing) {
-            return 'transition-all duration-300 hover:scale-[1.02] border-2 overflow-hidden group border-brand-border-strong cursor-default';
+            return 'transition-all duration-300 border-2 overflow-hidden group border-brand-border-strong cursor-default shadow-md rounded-2xl';
           }
           if (isSelected) {
-            return 'transition-all duration-300 hover:scale-[1.02] border-2 overflow-hidden group border-brand cursor-pointer hover:shadow-xl bg-brand-selected';
+            return 'transition-all duration-300 hover:scale-[1.02] border-2 overflow-hidden group border-brand cursor-pointer hover:shadow-2xl bg-brand-selected shadow-md rounded-2xl';
           }
-          return 'transition-all duration-300 hover:scale-[1.02] border-2 overflow-hidden group cursor-pointer hover:shadow-xl hover:border-brand-border';
+          return 'transition-all duration-300 hover:scale-[1.02] border-2 border-transparent overflow-hidden group cursor-pointer hover:shadow-2xl hover:border-brand-border shadow-sm rounded-2xl';
         })()}
         onClick={handleCardClick}
       >
@@ -331,7 +331,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
             </>
           )}
         </div>
-        <CardHeader className="p-3 sm:p-6">
+        <CardHeader className="p-4 sm:p-5 pb-2">
           {isEditing ? (
             <div className="space-y-2">
               <Input
@@ -345,20 +345,16 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
             </div>
           ) : (
             <>
-              <div className="flex items-start justify-between gap-2 mb-1 sm:mb-2">
-                <CardTitle className="line-clamp-2 text-base sm:text-lg sm:text-xl group-hover:text-brand-text transition-colors flex-1">
-                  {recipe.dishName}
-                </CardTitle>
-              </div>
-              <div className="mb-2">
-                <CardDescription className="line-clamp-4 text-xs sm:text-sm">
-                  {recipe.description}
-                </CardDescription>
-              </div>
+              <CardTitle className="line-clamp-2 text-base sm:text-lg group-hover:text-brand-text transition-colors leading-snug mb-1.5">
+                {recipe.dishName}
+              </CardTitle>
+              <CardDescription className="line-clamp-3 text-xs sm:text-sm leading-relaxed">
+                {recipe.description}
+              </CardDescription>
             </>
           )}
         </CardHeader>
-        <CardContent className="p-3 sm:p-6 pt-0 space-y-3">
+        <CardContent className="p-4 sm:p-5 pt-2 space-y-3">
           {isEditing ? (
             <div className="space-y-3">
               <div>
@@ -369,7 +365,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
                   onKeyDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
                   placeholder="Description"
-                  className="text-xs sm:text-sm min-h-[60px]"
+                  className="text-base sm:text-sm min-h-[60px]"
                 />
               </div>
               <div>
@@ -380,7 +376,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
                   onKeyDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
                   placeholder="Cuisine Type"
-                  className="text-xs sm:text-sm"
+                  className="text-base sm:text-sm"
                 />
               </div>
               <div>
@@ -391,7 +387,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
                   onKeyDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
                   placeholder="2 dl milk&#10;500 g flour&#10;3 eggs&#10;1 tsp salt"
-                  className="text-xs sm:text-sm min-h-[100px] font-mono"
+                  className="text-base sm:text-sm min-h-[100px] font-mono"
                 />
               </div>
               <div>
@@ -402,7 +398,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
                   onKeyDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
                   placeholder="Step-by-step cooking instructions..."
-                  className="text-xs sm:text-sm min-h-[120px]"
+                  className="text-base sm:text-sm min-h-[120px]"
                 />
               </div>
               <div>
@@ -442,7 +438,7 @@ export function RecipeCard({ recipe, isSelected = false, onSelect, onDeselect }:
                             <Input
                               type="text"
                               placeholder="Add tag..."
-                              className="flex-1 text-xs h-8"
+                              className="flex-1 text-base sm:text-xs h-8"
                               {...field}
                             />
                           </FormControl>
