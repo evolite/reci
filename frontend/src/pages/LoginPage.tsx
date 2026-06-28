@@ -48,13 +48,13 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen bg-brand-page flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
+      <Card className="w-full max-w-md shadow-xl rounded-2xl border-border/50">
+        <CardHeader className="text-center pb-2 pt-8 px-8">
           <AuthCardHeader title="Welcome Back" description="Login to your Reci account" />
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-8 pb-8">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleLogin)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(handleLogin)} className="space-y-5">
               {error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -66,13 +66,14 @@ export function LoginPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel className="text-sm font-medium">Email</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
                         placeholder="your@email.com"
                         disabled={loading}
                         autoComplete="email"
+                        className="h-11"
                         {...field}
                       />
                     </FormControl>
@@ -85,13 +86,14 @@ export function LoginPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel className="text-sm font-medium">Password</FormLabel>
                     <FormControl>
                       <Input
                         type="password"
                         placeholder="Enter your password"
                         disabled={loading}
                         autoComplete="current-password"
+                        className="h-11"
                         {...field}
                       />
                     </FormControl>
@@ -99,16 +101,20 @@ export function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Logging in...' : 'Login'}
+              <Button
+                type="submit"
+                className="w-full h-11 bg-brand-gradient-r text-white font-semibold shadow-md hover:shadow-lg transition-shadow mt-2"
+                disabled={loading}
+              >
+                {loading ? 'Logging in…' : 'Login'}
               </Button>
-              <div className="text-center space-y-2">
-                <Link to="/forgot-password" className="text-sm text-muted-foreground hover:underline">
+              <div className="text-center space-y-2 pt-1">
+                <Link to="/forgot-password" className="text-sm text-muted-foreground hover:text-brand-text transition-colors">
                   Forgot password?
                 </Link>
                 <div className="text-sm text-muted-foreground">
-                  Don't have an account?{' '}
-                  <Link to="/signup" className="hover:underline text-brand-text">
+                  Don&apos;t have an account?{' '}
+                  <Link to="/signup" className="font-medium hover:underline text-brand-text">
                     Sign up
                   </Link>
                 </div>

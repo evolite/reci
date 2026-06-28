@@ -28,10 +28,10 @@ export function RecipeGrid({ recipes, selectedRecipes, onRecipeSelect, onRecipeD
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-6">
       {recipes.map((recipe) => (
-        <RecipeCard 
-          key={recipe.id} 
+        <RecipeCard
+          key={recipe.id}
           recipe={recipe}
           isSelected={selectedRecipes.has(recipe.id)}
           onSelect={onRecipeSelect}

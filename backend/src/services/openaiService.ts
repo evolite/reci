@@ -145,13 +145,18 @@ function buildCommentsText(comments: string[]): string {
   return `\n\nTop Comments from viewers (these often contain full recipes):\n${commentsList}`;
 }
 
-function buildRecipePrompt(title: string, description: string, commentsText: string): string {
+function buildTranscriptText(transcript: string): string {
+  const truncated = transcript.substring(0, 8000);
+  return `\n\nVideo Transcript (PRIMARY SOURCE — use this for accurate ingredient lists, measurements, and step-by-step instructions):\n${truncated}`;
+}
+
+function buildRecipePrompt(title: string, description: string, commentsText: string, transcriptText: string = ''): string {
   return `Analyze the following recipe content (from a video, blog post, or recipe website) and extract ALL relevant information. Return ONLY a valid JSON object with no additional text.
 
 IMPORTANT: Even if the title or description is minimal or unclear, you MUST still return a valid JSON object with your best guess for the dish name, cuisine type, and ingredients based on what information is available. Do NOT return an error object - always return the required JSON structure.
 
 Title: ${title}
-Description: ${description}${commentsText}
+Description: ${description}${transcriptText}${commentsText}
 
 IMPORTANT: The description or comments section often contains the FULL RECIPE with ingredients and step-by-step instructions. Pay special attention to text that lists ingredients, measurements, cooking times, temperatures, and step-by-step instructions. Extract the complete recipe text if found.
 
@@ -273,7 +278,8 @@ function validateAnalysisStructure(analysis: RecipeAnalysis, sanitizedTitle: str
 export async function analyzeRecipe(
   title: string,
   description: string,
-  comments?: string[]
+  comments?: string[],
+  transcript?: string
 ): Promise<RecipeAnalysis> {
   // Sanitize inputs to prevent prompt injection
   const sanitizedTitle = sanitizeInput(title, 500);
@@ -281,9 +287,11 @@ export async function analyzeRecipe(
   const sanitizedComments = comments && comments.length > 0
     ? comments.slice(0, 5).map(c => sanitizeInput(c, 2000))
     : [];
+  const sanitizedTranscript = transcript ? sanitizeInput(transcript, 50000) : undefined;
 
   const commentsText = buildCommentsText(sanitizedComments);
-  const prompt = buildRecipePrompt(sanitizedTitle, sanitizedDescription, commentsText);
+  const transcriptText = sanitizedTranscript ? buildTranscriptText(sanitizedTranscript) : '';
+  const prompt = buildRecipePrompt(sanitizedTitle, sanitizedDescription, commentsText, transcriptText);
 
   try {
     const systemMessage = 'You are a helpful assistant that extracts recipe information from video titles and descriptions. You MUST always return a valid JSON object with the required structure (dishName, cuisineType, mainIngredients, etc.), even if the video information is minimal. Never return an error object - always provide your best guess based on available information. Always return valid JSON only, no markdown, no code blocks, just the JSON object.';

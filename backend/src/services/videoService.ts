@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import { YoutubeTranscript } from 'youtube-transcript';
 import { validateVideoUrl } from '../utils/validation';
 import { extractYouTubeCommentsFromHtml } from './youtubeServiceHelpers';
 import { getErrorMessage } from '../utils/errorHandler';
@@ -9,6 +10,30 @@ export interface VideoMetadata {
   thumbnailUrl: string;
   topComments?: string[];
   platform?: string;
+  transcript?: string;
+}
+
+function extractYouTubeVideoId(url: string): string | null {
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.hostname.includes('youtu.be')) {
+      return urlObj.pathname.slice(1).split('?')[0] || null;
+    }
+    return urlObj.searchParams.get('v');
+  } catch {
+    return null;
+  }
+}
+
+async function fetchYouTubeTranscript(url: string): Promise<string | undefined> {
+  const videoId = extractYouTubeVideoId(url);
+  if (!videoId) return undefined;
+  try {
+    const segments = await YoutubeTranscript.fetchTranscript(videoId);
+    return segments.map(s => s.text).join(' ').substring(0, 50000);
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -666,12 +691,22 @@ export async function getVideoMetadata(url: string): Promise<VideoMetadata> {
     // Extract comments (platform-specific, currently only YouTube)
     const topComments = extractCommentsFromHtml(html, platform);
 
+    // Fetch YouTube transcript when available (far more accurate than description+comments)
+    let transcript: string | undefined;
+    if (platform === 'youtube') {
+      transcript = await fetchYouTubeTranscript(url);
+      if (transcript) {
+        console.log('YouTube transcript fetched, length:', transcript.length);
+      }
+    }
+
     return {
       title,
       description,
       thumbnailUrl,
       topComments: topComments.length > 0 ? topComments : undefined,
       platform: platform || undefined,
+      transcript,
     };
   } catch (error) {
     throw new Error(`Failed to fetch video metadata: ${getErrorMessage(error)}`);

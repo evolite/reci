@@ -36,11 +36,11 @@ export function SignupPage() {
   const [loading, setLoading] = useState(false);
   const { register, checkInvite } = useAuth();
   const navigate = useNavigate();
-  
+
   const inviteForm = useForm<InviteFormValues>({
     defaultValues: { inviteToken: '' },
   });
-  
+
   const registerForm = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -51,7 +51,6 @@ export function SignupPage() {
     },
   });
 
-  // Helper to handle validation
   const validateToken = useCallback(async (token: string) => {
     setLoading(true);
     setError('');
@@ -73,7 +72,6 @@ export function SignupPage() {
     }
   }, [checkInvite, registerForm]);
 
-  // Run only once on mount or when token in URL changes
   useEffect(() => {
     const tokenFromUrl = searchParams.get('token');
     if (tokenFromUrl && step === 'invite') {
@@ -107,21 +105,21 @@ export function SignupPage() {
 
   return (
     <div className="min-h-screen bg-brand-page flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
+      <Card className="w-full max-w-md shadow-xl rounded-2xl border-border/50">
+        <CardHeader className="text-center pb-2 pt-8 px-8">
           <div className="flex justify-center mb-4">
-            <div className="bg-brand-gradient p-3 rounded-xl shadow-lg">
+            <div className="bg-brand-gradient p-3 rounded-2xl shadow-lg">
               <ChefHat className="w-8 h-8 text-white" />
             </div>
           </div>
-          <CardTitle className="text-2xl">
+          <CardTitle className="text-2xl font-bold">
             {step === 'invite' ? 'Register with Invite' : 'Create Your Account'}
           </CardTitle>
-          <CardDescription>
-            {step === 'invite' ? 'Enter your invite code' : 'Complete your registration'}
+          <CardDescription className="text-sm mt-1">
+            {step === 'invite' ? 'Enter your invite code to get started' : 'Complete your registration'}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-8 pb-8">
           {error && (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
@@ -131,21 +129,30 @@ export function SignupPage() {
 
           {step === 'invite' ? (
             <Form {...inviteForm} key="invite-step">
-              <form onSubmit={inviteForm.handleSubmit(onInviteSubmit)} className="space-y-4">
+              <form onSubmit={inviteForm.handleSubmit(onInviteSubmit)} className="space-y-5">
                 <FormField
                   control={inviteForm.control}
                   name="inviteToken"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Invite Code (Optional for first user)</FormLabel>
+                      <FormLabel className="text-sm font-medium">Invite Code <span className="text-muted-foreground font-normal">(optional for first user)</span></FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter code" disabled={loading} {...field} />
+                        <Input
+                          placeholder="Enter code"
+                          disabled={loading}
+                          className="h-11"
+                          {...field}
+                        />
                       </FormControl>
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Checking...' : 'Continue'}
+                <Button
+                  type="submit"
+                  className="w-full h-11 bg-brand-gradient-r text-white font-semibold shadow-md hover:shadow-lg transition-shadow"
+                  disabled={loading}
+                >
+                  {loading ? 'Checking…' : 'Continue'}
                 </Button>
               </form>
             </Form>
@@ -157,9 +164,14 @@ export function SignupPage() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Name</FormLabel>
+                      <FormLabel className="text-sm font-medium">Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Your name" disabled={loading} {...field} />
+                        <Input
+                          placeholder="Your name"
+                          disabled={loading}
+                          className="h-11"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -170,9 +182,15 @@ export function SignupPage() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel className="text-sm font-medium">Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="your@email.com" disabled={loading || emailFromInvite} {...field} />
+                        <Input
+                          type="email"
+                          placeholder="your@email.com"
+                          disabled={loading || emailFromInvite}
+                          className="h-11"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -183,9 +201,15 @@ export function SignupPage() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel className="text-sm font-medium">Password</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="At least 8 characters" disabled={loading} {...field} />
+                        <Input
+                          type="password"
+                          placeholder="At least 8 characters"
+                          disabled={loading}
+                          className="h-11"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -196,18 +220,34 @@ export function SignupPage() {
                   name="confirmPassword"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Confirm Password</FormLabel>
+                      <FormLabel className="text-sm font-medium">Confirm Password</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="Repeat password" disabled={loading} {...field} />
+                        <Input
+                          type="password"
+                          placeholder="Repeat password"
+                          disabled={loading}
+                          className="h-11"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Creating Account...' : 'Create Account'}
+                <Button
+                  type="submit"
+                  className="w-full h-11 bg-brand-gradient-r text-white font-semibold shadow-md hover:shadow-lg transition-shadow mt-1"
+                  disabled={loading}
+                >
+                  {loading ? 'Creating Account…' : 'Create Account'}
                 </Button>
-                <Button type="button" variant="ghost" className="w-full" onClick={() => setStep('invite')} disabled={loading}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => setStep('invite')}
+                  disabled={loading}
+                >
                   Back
                 </Button>
               </form>

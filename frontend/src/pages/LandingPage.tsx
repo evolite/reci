@@ -184,71 +184,71 @@ export function LandingPage() {
     <div className="min-h-screen bg-brand-page">
       {/* Hero Section */}
       <section className="relative overflow-hidden">
-        <div className="container mx-auto px-4 py-8 sm:py-12">
+        <div className="container mx-auto px-4 py-12 sm:py-20">
           <div className="text-center max-w-4xl mx-auto">
-            <div className="flex justify-center mb-6">
-              <div className="bg-brand-gradient p-4 rounded-2xl shadow-2xl">
-                <ChefHat className="w-16 h-16 text-white" />
+            <div className="flex justify-center mb-8">
+              <div className="bg-brand-gradient p-5 rounded-3xl shadow-2xl">
+                <ChefHat className="w-14 h-14 sm:w-16 sm:h-16 text-white" />
               </div>
             </div>
-            <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6 text-brand-gradient">
+            <h1 className="text-6xl sm:text-7xl md:text-8xl font-extrabold mb-4 text-brand-gradient tracking-tight">
               Reci
             </h1>
-            <p className="text-xl sm:text-2xl md:text-3xl font-semibold mb-4 text-gray-800 dark:text-gray-200">
-              Your Personal Recipe Video Library
+            <p className="text-2xl sm:text-3xl font-bold mb-5 text-gray-800 dark:text-gray-100 leading-tight">
+              Your Personal Recipe Library
             </p>
-            <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
-              Save your favorite recipes from videos, blogs, and recipe sites. Discover them later with AI-powered tagging and smart search.
+            <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 mb-4 max-w-xl mx-auto leading-relaxed">
+              Paste any recipe URL — YouTube, blogs, or food sites. AI extracts the full recipe instantly.
             </p>
-            <p className="text-base text-gray-700 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-              This is a self-hosted project. Deploy it yourself with Docker or Podman.
+            <p className="text-sm text-muted-foreground mb-10 max-w-lg mx-auto">
+              Self-hosted · Open source · Deploy with Docker or Podman
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <a 
-                href={GITHUB_URL} 
-                target="_blank" 
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mb-14">
+              <a
+                href={GITHUB_URL}
+                target="_blank"
                 rel="noopener noreferrer"
               >
-                <Button size="lg" className="w-full sm:w-auto bg-brand-gradient-r">
-                  <Github className="w-4 h-4 mr-2" />
+                <Button size="lg" className="w-full sm:w-auto h-12 px-8 bg-brand-gradient-r text-white font-semibold shadow-lg hover:shadow-xl transition-shadow">
+                  <Github className="w-5 h-5 mr-2" />
                   View on GitHub
                 </Button>
               </a>
               <Link to="/login">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto h-12 px-8 font-semibold border-2 hover:bg-brand-subtle transition-colors">
                   Already have an account? Login
                 </Button>
               </Link>
             </div>
 
             {/* Features */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto mb-12">
-              <Card className="text-center p-4 border-2 border-brand-border dark:border-brand-dark">
-                <div className="bg-brand-gradient w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mb-14">
+              <Card className="text-center p-5 border-2 border-brand-border/50 dark:border-brand-dark rounded-2xl hover:border-brand-border transition-colors bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm">
+                <div className="bg-brand-gradient w-11 h-11 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-md">
                   <Plus className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-sm font-semibold mb-1">Quick Add</h3>
-                <p className="text-xs text-muted-foreground">
-                  Paste recipe URLs
+                <h3 className="text-sm font-bold mb-1">Quick Add</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Paste any recipe URL
                 </p>
               </Card>
-              <Card className="text-center p-4 border-2 border-brand-border dark:border-brand-dark">
-                <div className="bg-brand-gradient w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3">
+              <Card className="text-center p-5 border-2 border-brand-border/50 dark:border-brand-dark rounded-2xl hover:border-brand-border transition-colors bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm">
+                <div className="bg-brand-gradient w-11 h-11 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-md">
                   <Search className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-sm font-semibold mb-1">Smart Search</h3>
-                <p className="text-xs text-muted-foreground">
-                  Find by ingredients
+                <h3 className="text-sm font-bold mb-1">Smart Search</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Find by ingredients or tags
                 </p>
               </Card>
-              <Card className="text-center p-4 border-2 border-brand-border dark:border-brand-dark">
-                <div className="bg-brand-gradient w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3">
+              <Card className="text-center p-5 border-2 border-brand-border/50 dark:border-brand-dark rounded-2xl hover:border-brand-border transition-colors bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm">
+                <div className="bg-brand-gradient w-11 h-11 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-md">
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-sm font-semibold mb-1">AI-Powered</h3>
-                <p className="text-xs text-muted-foreground">
-                  Auto-tagging
+                <h3 className="text-sm font-bold mb-1">AI-Powered</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Auto-extract &amp; tag recipes
                 </p>
               </Card>
             </div>
