@@ -77,6 +77,12 @@ app.use(
   })
 );
 
+// Unmatched API routes must not fall through to the SPA below, which would
+// answer 200 with index.html and hide the fact that the endpoint is gone.
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
+
 // Static frontend + SPA fallback
 const staticDir = path.join(__dirname, '..', 'public');
 if (fs.existsSync(staticDir)) {
