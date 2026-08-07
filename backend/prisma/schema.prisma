@@ -25,8 +25,6 @@ model User {
   createdAt             DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 
-  createdInvites        Invite[]  @relation("CreatedBy")
-  usedInvite            Invite?   @relation("UsedBy")
   recipes               Recipe[]
   shoppingCart          ShoppingCart?
   recipeRatings         RecipeRating[]
@@ -34,23 +32,6 @@ model User {
   @@map("users")
 }
 
-model Invite {
-  id          String    @id @default(uuid())
-  token       String    @unique
-  email       String?
-  createdById String
-  usedById    String?   @unique
-  usedAt      DateTime?
-  expiresAt   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  createdBy   User      @relation("CreatedBy", fields: [createdById], references: [id])
-  usedBy      User?     @relation("UsedBy", fields: [usedById], references: [id])
-
-  @@index([token])
-  @@map("invites")
-}
 
 model Recipe {
   id              String   @id @default(uuid())

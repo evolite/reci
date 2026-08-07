@@ -2,9 +2,9 @@ import crypto from 'node:crypto';
 import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { prisma } from '../lib/prisma';
-import { hashPassword, verifyPassword, generateToken, generateVerificationToken, generateResetToken } from '../services/authService';
+import { hashPassword, verifyPassword, generateToken, generateResetToken } from '../services/authService';
 import { authenticate, AuthRequest } from '../middleware/auth';
-import { validateInviteToken, isFirstUser } from './authHelpers';
+import { isFirstUser } from './authHelpers';
 import { validateEmail, validatePassword, normalizeEmail } from '../utils/validation';
 import {
   isOidcEnabled,
@@ -154,13 +154,6 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-const registerLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // 3 attempts per hour
-  message: 'Too many registration attempts, please try again later',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 const forgotPasswordLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
@@ -170,13 +163,6 @@ const forgotPasswordLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-const checkInviteLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // 20 checks per window
-  message: 'Too many invite check requests, please try again later',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 // Account lockout tracking (in-memory, consider moving to Redis in production)
 interface LockoutInfo {
@@ -218,102 +204,6 @@ function recordFailedLoginAttempt(email: string): void {
 function clearLoginAttempts(email: string): void {
   accountLockouts.delete(email);
 }
-
-// POST /api/auth/register - Register new user (requires valid invite token, first user becomes admin)
-router.post('/register', registerLimiter, async (req: Request, res: Response) => {
-  try {
-    const { email, password, name, inviteToken } = req.body;
-
-    // Validate email
-    const emailValidation = validateEmail(email);
-    if (!emailValidation.valid) {
-      return res.status(400).json({ error: emailValidation.error });
-    }
-
-    // Validate password
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.valid) {
-      return res.status(400).json({ error: passwordValidation.error });
-    }
-
-    const normalizedEmail = normalizeEmail(email);
-
-    // Check if this is the first user (no invite needed)
-    const firstUser = await isFirstUser();
-    let invite = null;
-    
-    if (!firstUser) {
-      // Not first user - validate invite token
-      const validation = await validateInviteToken(inviteToken || '', normalizedEmail);
-      if (!validation.valid) {
-        return res.status(400).json({ error: validation.error });
-      }
-
-      // Get the invite for later use
-      invite = await prisma.invite.findUnique({
-        where: { token: inviteToken },
-      });
-    }
-
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
-    });
-
-    if (existingUser) {
-      return res.status(409).json({ error: 'User with this email already exists' });
-    }
-
-    // First user becomes admin
-    const isAdmin = firstUser;
-
-    // Hash password
-    const passwordHash = await hashPassword(password);
-
-    // Create user
-    const emailVerificationExpires = new Date();
-    emailVerificationExpires.setHours(emailVerificationExpires.getHours() + 24); // 24-hour expiry
-    const user = await prisma.user.create({
-      data: {
-        email: normalizedEmail,
-        passwordHash,
-        name: name ? name.trim().substring(0, 100) : null, // Sanitize name
-        isAdmin,
-        emailVerificationToken: generateVerificationToken(),
-        emailVerificationTokenExpires: emailVerificationExpires,
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        isAdmin: true,
-        emailVerified: true,
-      },
-    });
-
-    // Mark invite as used (if not first user)
-    if (invite) {
-      await prisma.invite.update({
-        where: { id: invite.id },
-        data: {
-          usedById: user.id,
-          usedAt: new Date(),
-        },
-      });
-    }
-
-    // Generate JWT token
-    const token = generateToken(user.id);
-
-    res.status(201).json({
-      user,
-      token,
-    });
-  } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ error: 'Failed to register user' });
-  }
-});
 
 // POST /api/auth/login - Login (verify credentials, return token)
 router.post('/login', loginLimiter, async (req: Request, res: Response) => {
@@ -536,46 +426,6 @@ router.post('/reset-password', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Reset password error:', error);
     res.status(500).json({ error: 'Failed to reset password' });
-  }
-});
-
-// GET /api/auth/check-invite/:token - Check if invite token is valid (public, for signup page)
-router.get('/check-invite/:token', checkInviteLimiter, async (req: Request, res: Response) => {
-  try {
-    const { token } = req.params;
-
-    const invite = await prisma.invite.findUnique({
-      where: { token },
-      include: {
-        createdBy: {
-          select: {
-            email: true,
-            name: true,
-          },
-        },
-      },
-    });
-
-    if (!invite) {
-      return res.status(404).json({ error: 'Invalid invite token' });
-    }
-
-    if (invite.usedById) {
-      return res.status(400).json({ error: 'Invite token has already been used' });
-    }
-
-    if (invite.expiresAt && invite.expiresAt < new Date()) {
-      return res.status(400).json({ error: 'Invite token has expired' });
-    }
-
-    res.json({
-      valid: true,
-      email: invite.email,
-      expiresAt: invite.expiresAt,
-    });
-  } catch (error) {
-    console.error('Check invite error:', error);
-    res.status(500).json({ error: 'Failed to check invite token' });
   }
 });
 

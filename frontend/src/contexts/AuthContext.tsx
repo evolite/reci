@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
-import { login, register, logout, getCurrentUser, checkInvite } from '@/lib/api';
+import { login, logout, getCurrentUser } from '@/lib/api';
 import { getErrorMessage } from '@/lib/utils';
 
 export interface User {
@@ -15,9 +15,7 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name?: string, inviteToken?: string) => Promise<void>;
   logout: () => void;
-  checkInvite: (token: string) => Promise<{ valid: boolean; email?: string; expiresAt?: Date }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -87,13 +85,6 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
     localStorage.setItem(TOKEN_KEY, response.token);
   };
 
-  const handleRegister = async (email: string, password: string, name?: string, inviteToken?: string) => {
-    const response = await register(email, password, name, inviteToken);
-    setToken(response.token);
-    setUser(response.user);
-    localStorage.setItem(TOKEN_KEY, response.token);
-  };
-
   const handleLogout = () => {
     setToken(null);
     setUser(null);
@@ -101,19 +92,13 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
     logout();
   };
 
-  const handleCheckInvite = async (token: string) => {
-    return await checkInvite(token);
-  };
-
   const contextValue = useMemo(() => ({
     user,
     token,
     loading,
     login: handleLogin,
-    register: handleRegister,
     logout: handleLogout,
-    checkInvite: handleCheckInvite,
-  }), [user, token, loading, handleLogin, handleRegister, handleLogout, handleCheckInvite]);
+  }), [user, token, loading, handleLogin, handleLogout]);
 
   return (
     <AuthContext.Provider value={contextValue}>

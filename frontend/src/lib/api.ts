@@ -172,15 +172,6 @@ export interface AuthResponse {
   token: string;
 }
 
-export async function register(
-  email: string,
-  password: string,
-  name?: string,
-  inviteToken?: string
-): Promise<AuthResponse> {
-  return postWithoutAuth<AuthResponse>('/api/auth/register', { email, password, name, inviteToken }, 'Failed to register');
-}
-
 export async function login(email: string, password: string): Promise<AuthResponse> {
   return postWithoutAuth<AuthResponse>('/api/auth/login', { email, password }, 'Failed to login');
 }
@@ -220,10 +211,6 @@ export async function resetPassword(token: string, newPassword: string): Promise
   await postWithoutAuth<void>('/api/auth/reset-password', { token, newPassword }, 'Failed to reset password');
 }
 
-export async function checkInvite(token: string): Promise<{ valid: boolean; email?: string; expiresAt?: Date }> {
-  return getWithoutAuth<{ valid: boolean; email?: string; expiresAt?: Date }>(`/api/auth/check-invite/${token}`, 'Invalid invite token');
-}
-
 // Waitlist API functions
 export async function joinWaitlist(email: string): Promise<{ email: string; position: number; message: string }> {
   return postWithoutAuth<{ email: string; position: number; message: string }>('/api/waitlist', { email }, 'Failed to join waitlist');
@@ -235,52 +222,6 @@ export async function getWaitlistPosition(email: string): Promise<{ email: strin
 
 export async function getWaitlistStats(): Promise<{ total: number }> {
   return getWithoutAuth<{ total: number }>('/api/waitlist/stats', 'Failed to get waitlist statistics');
-}
-
-// Invite API functions (admin only)
-export interface Invite {
-  id: string;
-  token: string;
-  email?: string | null;
-  used: boolean;
-  usedAt?: string | null;
-  expiresAt?: string | null;
-  expired: boolean;
-  createdAt: string;
-  createdBy: {
-    email: string;
-    name?: string | null;
-  };
-  usedBy?: {
-    email: string;
-    name?: string | null;
-  } | null;
-}
-
-export interface InviteStats {
-  total: number;
-  used: number;
-  unused: number;
-  expired: number;
-}
-
-export async function createInvite(email?: string, expiresInDays?: number): Promise<{ invite: Invite }> {
-  return apiRequest<{ invite: Invite }>('/api/invites', {
-    method: 'POST',
-    body: { email, expiresInDays },
-  });
-}
-
-export async function getInvites(): Promise<{ invites: Invite[] }> {
-  return apiRequest<{ invites: Invite[] }>('/api/invites');
-}
-
-export async function deleteInvite(inviteId: string): Promise<void> {
-  return deleteWithAuth(`/api/invites/${inviteId}`, 'Failed to delete invite');
-}
-
-export async function getInviteStats(): Promise<{ stats: InviteStats }> {
-  return apiRequest<{ stats: InviteStats }>('/api/invites/stats');
 }
 
 // Recipe API functions (updated to include auth)

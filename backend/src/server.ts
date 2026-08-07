@@ -6,7 +6,6 @@ import path from 'node:path';
 import fs from 'node:fs';
 import recipeRoutes from './routes/recipes';
 import authRoutes from './routes/auth';
-import inviteRoutes from './routes/invites';
 import waitlistRoutes from './routes/waitlist';
 import { cartRouter, cartPublicRouter } from './routes/cart';
 import settingsRoutes from './routes/settings';
@@ -55,7 +54,6 @@ app.use(express.json({ limit: '10mb' })); // Limit JSON payload size
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/invites', inviteRoutes);
 app.use('/api/waitlist', waitlistRoutes);
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/ratings', ratingsRoutes);
