@@ -56,6 +56,7 @@ model Recipe {
   videoUrl        String   @unique
   videoPlatform   String?  // Optional platform identifier (e.g., "youtube", "instagram", "tiktok")
   thumbnailUrl    String
+  imagePath       String?  // Locally stored copy of the thumbnail (e.g. "/images/<id>.jpg"); external CDN URLs expire
   description     String   @default("")
   dishName        String
   cuisineType     String

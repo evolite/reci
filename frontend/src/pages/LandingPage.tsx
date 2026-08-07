@@ -10,6 +10,7 @@ interface Recipe {
   dishName: string;
   description: string;
   thumbnailUrl: string;
+  imagePath?: string | null;
   videoUrl: string;
   cuisineType: string;
   tags: string[];
@@ -29,7 +30,7 @@ function RecipeCard({ recipe }: RecipeCardProps) {
     >
       <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0">
         <img
-          src={recipe.thumbnailUrl || '/recipe-placeholder.svg'}
+          src={recipe.imagePath || recipe.thumbnailUrl || '/recipe-placeholder.svg'}
           alt={recipe.dishName}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
           onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/recipe-placeholder.svg'; }}

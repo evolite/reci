@@ -9,6 +9,23 @@ import { validateVideoUrl } from '../utils/validation';
 import { handleRouteError, validateString, validateArray, filterNonEmptyStrings } from '../utils/errorHandler';
 import { calculateAverageRating, getUserRating, getRecipeRatingStats } from '../services/ratingService';
 import { serializeArray, deserializeArray } from '../lib/sqliteHelpers';
+import { storeRecipeImage } from '../services/imageService';
+
+/**
+ * Download the recipe's thumbnail and persist its local path.
+ * Best-effort: a failed download leaves imagePath untouched rather than
+ * failing the request the caller actually made.
+ */
+async function persistRecipeImage(recipeId: string, thumbnailUrl: string) {
+  const imagePath = await storeRecipeImage(recipeId, thumbnailUrl);
+  if (!imagePath) {
+    return null;
+  }
+  return prisma.recipe.update({
+    where: { id: recipeId },
+    data: { imagePath },
+  });
+}
 
 function mapRecipe(recipe: any) {
   return {
@@ -62,6 +79,7 @@ router.get('/public', async (req: Request, res: Response) => {
         dishName: true,
         description: true,
         thumbnailUrl: true,
+        imagePath: true,
         videoUrl: true,
         cuisineType: true,
         tags: true,
@@ -281,7 +299,9 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       },
     });
 
-    res.status(201).json(mapRecipe(recipe));
+    const withImage = await persistRecipeImage(recipe.id, metadata.thumbnailUrl);
+
+    res.status(201).json(mapRecipe(withImage ?? recipe));
   } catch (error) {
     handleRouteError(error, res, 'creating recipe');
   }
@@ -582,7 +602,10 @@ router.post('/:id/rescrape', async (req: AuthRequest, res: Response) => {
       },
     });
 
-    res.json(mapRecipe(recipe));
+    // Re-scraping yields a freshly signed CDN URL, so grab the image while it is valid.
+    const withImage = await persistRecipeImage(id, metadata.thumbnailUrl);
+
+    res.json(mapRecipe(withImage ?? recipe));
   } catch (error) {
     handleRouteError(error, res, 're-scraping recipe');
   }
@@ -672,7 +695,10 @@ router.post('/:id/rescrape-and-analyze', async (req: AuthRequest, res: Response)
       },
     });
 
-    res.json(mapRecipe(recipe));
+    // Re-scraping yields a freshly signed CDN URL, so grab the image while it is valid.
+    const withImage = await persistRecipeImage(id, metadata.thumbnailUrl);
+
+    res.json(mapRecipe(withImage ?? recipe));
   } catch (error) {
     handleRouteError(error, res, 're-scraping and analyzing recipe');
   }

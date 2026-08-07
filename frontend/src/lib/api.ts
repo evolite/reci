@@ -143,6 +143,8 @@ export interface Recipe {
   videoUrl: string;
   videoPlatform?: string | null;
   thumbnailUrl: string;
+  /** Locally stored copy of the thumbnail; preferred over thumbnailUrl, which can expire. */
+  imagePath?: string | null;
   description: string;
   dishName: string;
   cuisineType: string;

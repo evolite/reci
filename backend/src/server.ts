@@ -11,6 +11,7 @@ import waitlistRoutes from './routes/waitlist';
 import { cartRouter, cartPublicRouter } from './routes/cart';
 import settingsRoutes from './routes/settings';
 import ratingsRoutes from './routes/ratings';
+import { IMAGE_DIR, IMAGE_ROUTE, ensureImageDir } from './services/imageService';
 
 dotenv.config();
 
@@ -23,8 +24,21 @@ if (process.env.NODE_ENV === 'production' && !process.env.CORS_ORIGIN) {
   process.exit(1);
 }
 
-// Security headers
-app.use(helmet());
+// Security headers.
+// helmet's default CSP sets `img-src 'self' data:`, which blocks every remote
+// thumbnail. Recipe images are stored locally (and so are same-origin), but
+// `https:` is allowed as a fallback for recipes whose image has not been
+// downloaded yet.
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        'img-src': ["'self'", 'data:', 'https:'],
+      },
+    },
+  })
+);
 
 // CORS configuration
 const corsOptions = {
@@ -49,6 +63,17 @@ app.use('/api/settings', settingsRoutes);
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
+
+// Locally stored recipe thumbnails. Served same-origin so they satisfy CSP and
+// keep working after the source CDN URL expires.
+ensureImageDir();
+app.use(
+  IMAGE_ROUTE,
+  express.static(IMAGE_DIR, {
+    maxAge: '30d',
+    fallthrough: false,
+  })
+);
 
 // Static frontend + SPA fallback
 const staticDir = path.join(__dirname, '..', 'public');
