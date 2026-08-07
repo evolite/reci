@@ -18,6 +18,10 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Behind cloudflared, so X-Forwarded-For is set. Without this express-rate-limit
+// cannot identify clients and throws ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
+app.set('trust proxy', 1);
+
 // Fail fast in production if CORS_ORIGIN is not set
 if (process.env.NODE_ENV === 'production' && !process.env.CORS_ORIGIN) {
   console.error('FATAL: CORS_ORIGIN must be set in production. Refusing to start with wildcard CORS.');

@@ -17,6 +17,7 @@ const AdminPanelPage = lazy(() => import('./pages/AdminPanelPage').then(m => ({ 
 const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
 const SharedCartPage = lazy(() => import('./pages/SharedCartPage').then(m => ({ default: m.SharedCartPage })));
 const RecipePage = lazy(() => import('./pages/RecipePage').then(m => ({ default: m.RecipePage })));
+const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage').then(m => ({ default: m.AuthCallbackPage })));
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ function App() {
               <Route path="/signup" element={<LandingPage />} />
               <Route path="/register" element={<SignupPage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/auth/callback" element={<AuthCallbackPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/verify-email" element={<VerifyEmailPage />} />

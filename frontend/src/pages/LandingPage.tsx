@@ -1,156 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { ChefHat, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ChefHat, Sparkles, Search, Plus, ArrowRight, Github, Tag } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-
-interface Recipe {
-  id: string;
-  dishName: string;
-  description: string;
-  thumbnailUrl: string;
-  imagePath?: string | null;
-  videoUrl: string;
-  cuisineType: string;
-  tags: string[];
-}
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
-const GITHUB_URL = 'https://github.com/evolite/reci';
-
-interface RecipeCardProps {
-  readonly recipe: Recipe;
-}
-
-function RecipeCard({ recipe }: RecipeCardProps) {
-  return (
-    <Card
-      className="flex-shrink-0 w-80 sm:w-96 h-full flex flex-col overflow-hidden group cursor-pointer hover:scale-105 transition-transform duration-300 bg-white dark:bg-gray-800"
-    >
-      <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0">
-        <img
-          src={recipe.imagePath || recipe.thumbnailUrl || '/recipe-placeholder.svg'}
-          alt={recipe.dishName}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-          onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/recipe-placeholder.svg'; }}
-        />
-      </div>
-      <CardContent className="p-4 flex-1 flex flex-col">
-        <h3 className="font-semibold text-base sm:text-lg mb-2 line-clamp-2">
-          {recipe.dishName}
-        </h3>
-        <p className="text-sm text-muted-foreground mb-3 flex-1 line-clamp-4">
-          {recipe.description}
-        </p>
-        <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <Badge variant="secondary" className="text-xs bg-brand-light text-brand-fg dark:bg-brand-dark dark:text-brand-on-dark">
-            {recipe.cuisineType}
-          </Badge>
-        </div>
-        {recipe.tags && recipe.tags.length > 0 && (
-          <div className="border-t pt-3 mt-auto">
-            <div className="flex items-center gap-2 mb-2">
-              <Tag className="w-3 h-3 text-muted-foreground" />
-              <span className="text-xs font-medium text-muted-foreground">Tags</span>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {recipe.tags.slice(0, 6).map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="outline"
-                  className="text-xs bg-tag text-tag-text dark:bg-tag-dark dark:text-tag-text-dark border-tag-border dark:border-tag-text"
-                >
-                  {tag}
-                </Badge>
-              ))}
-              {recipe.tags.length > 6 && (
-                <Badge variant="outline" className="text-xs">
-                  +{recipe.tags.length - 6}
-                </Badge>
-              )}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
+import { AuthentikSignInButton } from '@/components/AuthentikSignInButton';
 
 export function LandingPage() {
   const [searchParams] = useSearchParams();
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [loading, setLoading] = useState(true);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const hasInviteToken = searchParams.get('token');
 
-  useEffect(() => {
-    // Fetch public recipes
-    fetch(`${API_BASE_URL}/api/recipes/public`)
-      .then(res => res.json())
-      .then(data => {
-        setRecipes(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Failed to fetch recipes:', err);
-        setLoading(false);
-      });
-  }, []);
-
-  // Auto-scroll recipe feed horizontally infinitely
-  useEffect(() => {
-    if (!scrollContainerRef.current || recipes.length === 0) return;
-
-    const container = scrollContainerRef.current;
-    let scrollPosition = 0;
-    const scrollSpeed = 0.5; // pixels per frame
-    let animationId: number | null = null;
-    let isPaused = false;
-
-    const scroll = () => {
-      if (isPaused) {
-        animationId = requestAnimationFrame(scroll);
-        return;
-      }
-      
-      scrollPosition += scrollSpeed;
-      const maxScroll = container.scrollWidth - container.clientWidth;
-      
-      // Reset to start for seamless infinite loop
-      if (scrollPosition >= maxScroll) {
-        scrollPosition = 0;
-      }
-      
-      container.scrollLeft = scrollPosition;
-      animationId = requestAnimationFrame(scroll);
-    };
-
-    animationId = requestAnimationFrame(scroll);
-
-    // Pause on hover
-    const handleMouseEnter = () => {
-      isPaused = true;
-    };
-    const handleMouseLeave = () => {
-      isPaused = false;
-      animationId ??= requestAnimationFrame(scroll);
-    };
-
-    container.addEventListener('mouseenter', handleMouseEnter);
-    container.addEventListener('mouseleave', handleMouseLeave);
-
-    return () => {
-      if (animationId !== null) {
-        cancelAnimationFrame(animationId);
-      }
-      container.removeEventListener('mouseenter', handleMouseEnter);
-      container.removeEventListener('mouseleave', handleMouseLeave);
-    };
-  }, [recipes]);
-
-
-  // If user has invite token, show registration link
+  // Invited users still go through local registration.
   if (hasInviteToken) {
     return (
       <div className="min-h-screen bg-brand-page flex items-center justify-center p-4">
@@ -172,7 +30,7 @@ export function LandingPage() {
             </Link>
             <Link to="/signup">
               <Button variant="ghost" className="w-full">
-                Back to Landing Page
+                Back
               </Button>
             </Link>
           </CardContent>
@@ -182,130 +40,26 @@ export function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-brand-page">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="container mx-auto px-4 py-8 sm:py-12">
-          <div className="text-center max-w-4xl mx-auto">
-            <div className="flex justify-center mb-6">
-              <div className="bg-brand-gradient p-4 rounded-2xl shadow-2xl">
-                <ChefHat className="w-16 h-16 text-white" />
-              </div>
-            </div>
-            <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6 text-brand-gradient">
-              Reci
-            </h1>
-            <p className="text-xl sm:text-2xl md:text-3xl font-semibold mb-4 text-gray-800 dark:text-gray-200">
-              Your Personal Recipe Video Library
-            </p>
-            <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
-              Save your favorite recipes from videos, blogs, and recipe sites. Discover them later with AI-powered tagging and smart search.
-            </p>
-            <p className="text-base text-gray-700 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-              This is a self-hosted project. Deploy it yourself with Docker or Podman.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <a 
-                href={GITHUB_URL} 
-                target="_blank" 
-                rel="noopener noreferrer"
-              >
-                <Button size="lg" className="w-full sm:w-auto bg-brand-gradient-r">
-                  <Github className="w-4 h-4 mr-2" />
-                  View on GitHub
-                </Button>
-              </a>
-              <Link to="/login">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                  Already have an account? Login
-                </Button>
-              </Link>
-            </div>
-
-            {/* Features */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto mb-12">
-              <Card className="text-center p-4 border-2 border-brand-border dark:border-brand-dark">
-                <div className="bg-brand-gradient w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3">
-                  <Plus className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="text-sm font-semibold mb-1">Quick Add</h3>
-                <p className="text-xs text-muted-foreground">
-                  Paste recipe URLs
-                </p>
-              </Card>
-              <Card className="text-center p-4 border-2 border-brand-border dark:border-brand-dark">
-                <div className="bg-brand-gradient w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3">
-                  <Search className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="text-sm font-semibold mb-1">Smart Search</h3>
-                <p className="text-xs text-muted-foreground">
-                  Find by ingredients
-                </p>
-              </Card>
-              <Card className="text-center p-4 border-2 border-brand-border dark:border-brand-dark">
-                <div className="bg-brand-gradient w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3">
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="text-sm font-semibold mb-1">AI-Powered</h3>
-                <p className="text-xs text-muted-foreground">
-                  Auto-tagging
-                </p>
-              </Card>
-            </div>
+    <div className="min-h-screen bg-brand-page flex items-center justify-center p-4">
+      <div className="w-full max-w-sm text-center">
+        <div className="flex justify-center mb-6">
+          <div className="bg-brand-gradient p-4 rounded-2xl shadow-2xl">
+            <ChefHat className="w-12 h-12 text-white" />
           </div>
         </div>
-      </section>
 
-      {/* Horizontal Scrolling Recipe Feed - Full Width */}
-      {!loading && recipes.length > 0 && (
-        <section className="w-full py-12 bg-brand-gradient-r">
-          <div className="container mx-auto px-4">
-            <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 text-white">
-              Save Your Favorites, Discover Them Later
-            </h2>
-            <p className="text-center text-white/90 mb-8 max-w-2xl mx-auto">
-              Add recipes from any source and find them easily later with smart search and AI-powered organization.
-            </p>
-            <div
-              ref={scrollContainerRef}
-              className="flex gap-6 overflow-x-hidden items-stretch"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-              <style>{`
-                div[ref="${scrollContainerRef}"]::-webkit-scrollbar {
-                  display: none;
-                }
-              `}</style>
-              {recipes.map((recipe) => (
-                <RecipeCard key={recipe.id} recipe={recipe} />
-              ))}
-              {/* Duplicate recipes for seamless infinite loop */}
-              {recipes.map((recipe) => (
-                <RecipeCard key={`${recipe.id}-dup`} recipe={recipe} />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+        <h1 className="text-5xl sm:text-6xl font-bold mb-3 text-brand-gradient">Reci</h1>
+        <p className="text-muted-foreground mb-8">Your personal recipe library</p>
 
-      {/* Footer */}
-      <footer className="py-8 border-t bg-white/50 dark:bg-gray-800/50">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <p>© 2024 Reci. All rights reserved.</p>
-            <a 
-              href={GITHUB_URL} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 hover:text-brand-text transition-colors"
-            >
-              <Github className="w-4 h-4" />
-              <span>View on GitHub</span>
-            </a>
-          </div>
+        <div className="space-y-3">
+          <AuthentikSignInButton className="w-full bg-brand-gradient-r" />
+          <Link to="/login" className="block">
+            <Button variant="outline" size="lg" className="w-full">
+              Sign in with email
+            </Button>
+          </Link>
         </div>
-      </footer>
+      </div>
     </div>
   );
 }

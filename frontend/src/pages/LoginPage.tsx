@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { AlertCircle } from 'lucide-react';
 import { AuthCardHeader } from '@/components/AuthCardHeader';
+import { AuthentikSignInButton } from '@/components/AuthentikSignInButton';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
@@ -24,6 +25,21 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Surface failures bounced back from the authentik round trip.
+  useEffect(() => {
+    const ssoErrors: Record<string, string> = {
+      sso_failed: 'Single sign-on failed. Please try again.',
+      sso_state_mismatch: 'Single sign-on session expired. Please try again.',
+      sso_unavailable: 'Single sign-on is currently unavailable.',
+    };
+    const code = searchParams.get('error');
+    if (code && ssoErrors[code]) {
+      setError(ssoErrors[code]);
+    }
+  }, [searchParams]);
+
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -53,6 +69,15 @@ export function LoginPage() {
           <AuthCardHeader title="Welcome Back" description="Login to your Reci account" />
         </CardHeader>
         <CardContent>
+          <AuthentikSignInButton className="w-full bg-brand-gradient-r" />
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">or</span>
+            </div>
+          </div>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleLogin)} className="space-y-4">
               {error && (

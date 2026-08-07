@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { prisma } from '../lib/prisma';
@@ -5,8 +6,144 @@ import { hashPassword, verifyPassword, generateToken, generateVerificationToken,
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { validateInviteToken, isFirstUser } from './authHelpers';
 import { validateEmail, validatePassword, normalizeEmail } from '../utils/validation';
+import {
+  isOidcEnabled,
+  createState,
+  createPkcePair,
+  buildAuthorizationUrl,
+  completeAuthorization,
+  OidcUserInfo,
+} from '../services/oidcService';
 
 const router = Router();
+
+// Short-lived cookie carrying the OIDC state + PKCE verifier across the redirect.
+const OIDC_COOKIE = 'reci_oidc_tx';
+const OIDC_COOKIE_MAX_AGE_MS = 10 * 60 * 1000;
+
+function readCookie(req: Request, name: string): string | null {
+  const header = req.headers.cookie;
+  if (!header) {
+    return null;
+  }
+  for (const part of header.split(';')) {
+    const [key, ...rest] = part.trim().split('=');
+    if (key === name) {
+      return decodeURIComponent(rest.join('='));
+    }
+  }
+  return null;
+}
+
+function frontendUrl(path: string): string {
+  const base = (process.env.APP_URL || 'http://localhost:4001').replace(/\/+$/, '');
+  return `${base}${path}`;
+}
+
+/**
+ * Resolve an authentik identity to a local user.
+ * Matches on the subject first, then falls back to email so accounts that
+ * already existed before SSO get linked instead of duplicated.
+ */
+async function resolveOidcUser(info: OidcUserInfo) {
+  const bySub = await prisma.user.findUnique({ where: { oidcSub: info.sub } });
+  if (bySub) {
+    return bySub;
+  }
+
+  // Same normalisation as local registration, so omhw@slashdir.net in authentik
+  // resolves to the existing local account rather than creating a duplicate.
+  const email = normalizeEmail(info.email);
+
+  const byEmail = await prisma.user.findUnique({ where: { email } });
+  if (byEmail) {
+    return prisma.user.update({
+      where: { id: byEmail.id },
+      data: { oidcSub: info.sub, emailVerified: true },
+    });
+  }
+
+  // First user to ever sign in becomes admin, matching local registration.
+  const firstUser = await isFirstUser();
+  return prisma.user.create({
+    data: {
+      email,
+      name: info.name,
+      oidcSub: info.sub,
+      passwordHash: null,
+      emailVerified: true,
+      isAdmin: firstUser,
+    },
+  });
+}
+
+// GET /api/auth/config - What the login UI should offer
+router.get('/config', (req: Request, res: Response) => {
+  res.json({ oidcEnabled: isOidcEnabled() });
+});
+
+// GET /api/auth/oidc/login - Kick off the authentik redirect
+router.get('/oidc/login', async (req: Request, res: Response) => {
+  if (!isOidcEnabled()) {
+    return res.status(404).json({ error: 'Single sign-on is not configured' });
+  }
+
+  try {
+    const state = createState();
+    const { verifier, challenge } = createPkcePair();
+
+    res.cookie(OIDC_COOKIE, JSON.stringify({ state, verifier }), {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: OIDC_COOKIE_MAX_AGE_MS,
+      path: '/api/auth/oidc',
+    });
+
+    res.redirect(await buildAuthorizationUrl(state, challenge));
+  } catch (error) {
+    console.error('OIDC login error:', error);
+    res.redirect(frontendUrl('/login?error=sso_unavailable'));
+  }
+});
+
+// GET /api/auth/oidc/callback - Exchange the code and hand a session to the SPA
+router.get('/oidc/callback', async (req: Request, res: Response) => {
+  if (!isOidcEnabled()) {
+    return res.status(404).json({ error: 'Single sign-on is not configured' });
+  }
+
+  const clearTransaction = () => res.clearCookie(OIDC_COOKIE, { path: '/api/auth/oidc' });
+
+  try {
+    const { code, state } = req.query;
+    const raw = readCookie(req, OIDC_COOKIE);
+    if (!raw || typeof code !== 'string' || typeof state !== 'string') {
+      clearTransaction();
+      return res.redirect(frontendUrl('/login?error=sso_failed'));
+    }
+
+    const transaction = JSON.parse(raw) as { state: string; verifier: string };
+    // Constant-time compare to avoid leaking the state through timing.
+    const expected = Buffer.from(transaction.state);
+    const received = Buffer.from(state);
+    if (expected.length !== received.length || !crypto.timingSafeEqual(expected, received)) {
+      clearTransaction();
+      return res.redirect(frontendUrl('/login?error=sso_state_mismatch'));
+    }
+
+    const info = await completeAuthorization(code, transaction.verifier);
+    const user = await resolveOidcUser(info);
+
+    clearTransaction();
+    // Token goes in the fragment: fragments are not sent to servers or logged.
+    res.redirect(`${frontendUrl('/auth/callback')}#token=${encodeURIComponent(generateToken(user.id))}`);
+  } catch (error) {
+    console.error('OIDC callback error:', error);
+    clearTransaction();
+    res.redirect(frontendUrl('/login?error=sso_failed'));
+  }
+});
 
 // Rate limiters
 const loginLimiter = rateLimit({
@@ -214,6 +351,12 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
     if (!user) {
       recordFailedLoginAttempt(normalizedEmail);
       return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Accounts provisioned through authentik have no local password.
+    if (!user.passwordHash) {
+      recordFailedLoginAttempt(normalizedEmail);
+      return res.status(401).json({ error: 'This account signs in through authentik' });
     }
 
     // Verify password

@@ -13,7 +13,8 @@ datasource db {
 model User {
   id                    String    @id @default(uuid())
   email                 String    @unique
-  passwordHash          String
+  passwordHash          String?   // Null for accounts that only sign in through authentik
+  oidcSub               String?   @unique // authentik subject claim
   name                  String?
   isAdmin               Boolean   @default(false)
   emailVerified         Boolean   @default(false)
